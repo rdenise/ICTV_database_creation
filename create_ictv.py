@@ -189,7 +189,7 @@ def fetch_genbank_file(species) :
             else :
                 logging.debug(f'Did not check, erasing the file -> {gbff_url}')
         else:
-            logging.debug(f'Thisfile already exists -> {file_name}')
+            logging.debug(f'This file already exists -> {file_name}')
 
     return 
 
