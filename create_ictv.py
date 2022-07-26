@@ -146,9 +146,12 @@ def fetch_genbank_file(species) :
     global session
 
     # check integrity of the file after download (note: if file was dezipped and rezipped it will not be recognized anymore)
-    md5_gbk = pd.read_csv(StringIO(session.get(
-                        os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
-                        names=['md5','assembly_files'], sep='\s+')
+    try: 
+        md5_gbk = pd.read_csv(StringIO(session.get(
+                            os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
+                            names=['md5','assembly_files'], sep='\s+')
+    except:
+        logging.debug(f"EXCEPTION ERROR PARSING {gbff_url}")
 
     ftp_location = {'ftp_gbff':GenBank,
                      'ftp_fna':Genomes,
