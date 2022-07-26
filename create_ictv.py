@@ -152,7 +152,7 @@ def fetch_genbank_file(species) :
                             os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
                             names=['md5','assembly_files'], sep='\s+')
     except:
-        logging.debug(f"EXCEPTION ERROR PARSING {gbff_url}")
+        logging.debug(f"EXCEPTION ERROR PARSING {os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')}")
 
     ftp_location = {'ftp_gbff':GenBank,
                      'ftp_fna':Genomes,
