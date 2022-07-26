@@ -10,6 +10,7 @@
 ##########################################################################################
 
 import argparse
+from genericpath import isfile
 from textwrap import dedent
 import sys, os
 import pandas as pd
@@ -163,30 +164,32 @@ def fetch_genbank_file(species) :
 
     for ftp_file, local_folder in ftp_location.items():
 
-        gbff_url = "{}/{}".format(species['ftp_path'], species[ftp_file]).replace('ftp:', 'https:')
-        
-        logging.debug(f"-> Using or downloading/using {gbff_url}")
+        file_name = os.path.join(local_folder, species[ftp_file].replace('.gz',''))
 
-        gbff_response = session.get(gbff_url)
-        md5_gbff = hashlib.md5(gbff_response.content)
-
-        sub_md5_gbff = md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])]
-
-        if not sub_md5_gbff.empty and sub_md5_gbff.md5.values[0] == md5_gbff.hexdigest() :
+        if not os.path.isfile(file_name):
+            gbff_url = "{}/{}".format(species['ftp_path'], species[ftp_file]).replace('ftp:', 'https:')
             
-            # print("\n-> md5 CHECKED OK")
-            logging.debug(f'MD5 OK and checked for -> {gbff_url}')
+            logging.debug(f"-> Using or downloading/using {gbff_url}")
 
+            gbff_response = session.get(gbff_url)
+            md5_gbff = hashlib.md5(gbff_response.content)
 
-            file_name = os.path.join(local_folder, species[ftp_file].replace('.gz',''))
+            sub_md5_gbff = md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])]
 
-            if species[ftp_file].endswith(".gz"):
-                write_file_uncompress(gbff_response, file_name)
-            else:
-                write_file(gbff_response, file_name)
+            if not sub_md5_gbff.empty and sub_md5_gbff.md5.values[0] == md5_gbff.hexdigest() :
+                
+                # print("\n-> md5 CHECKED OK")
+                logging.debug(f'MD5 OK and checked for -> {gbff_url}')
 
-        else :
-            logging.debug(f'Did not check, erasing the file -> {gbff_url}')
+                if species[ftp_file].endswith(".gz"):
+                    write_file_uncompress(gbff_response, file_name)
+                else:
+                    write_file(gbff_response, file_name)
+
+            else :
+                logging.debug(f'Did not check, erasing the file -> {gbff_url}')
+        else:
+            logging.debug(f'Thisfile already exists -> {file_name}')
 
     return 
 
