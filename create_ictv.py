@@ -79,26 +79,26 @@ def get_assembly_file(url) :
 ##########################################################################################
 
 
-def select_assembly_rows(assembly_df, kingdom) :
-    """
-    Function that will select the interresting columns of the assembly file
+def write_file_uncompress(gbff_response, local_filename) :
 
-    :params assembly_df: Dataframe that contains the informations of the assembly ncbi file
-    :type: pandas.dataframe
-    :params kingdom: the name of the kingdom of the species of the assemnly file
+    '''
+    Function that will read the (multi) genbank file and extract the infornations
+    about each replicon.
+
+    :params species: row of the assembly dataframe
+    :type: pandas.Series
+    :params Genomes: Path to the Genomes folder
     :type: str
-    :return: A sub dataframe with the selected columns and the kingdom added at the end
-    :rtype: pandas.dataframe
-    """
+    :params gbff_response: The gz file from the ftp of assembly database
+    :type: requests.models.Response
+    '''
 
-    assembly_df = assembly_df[(assembly_df.genome_rep == 'Full') & (assembly_df.assembly_level == 'Complete Genome')].reset_index(drop=True)
+    with gzip.open(BytesIO(gbff_response.content), mode='rt') as r_file:  
+        with open(local_filename, 'wt') as w_file:      
+            for line in r_file:        
+                w_file.write(line)
 
-    assembly_df.loc[:,"ftp_file"] = assembly_df.ftp_path.apply(lambda x : "{}_genomic.gbff.gz".format(x.split('/')[-1]))
-    assembly_df.loc[:,"kingdom"] = kingdom
-
-    logging.debug('New columns "ftp_file" and "kingdom" created for {kingdom}'.format(kingdom=kingdom))
-
-    return assembly_df[['assembly_accession', 'species_taxid', 'ftp_path', 'ftp_file', 'organism_name', 'kingdom']]
+    return
 
 ##########################################################################################
 ##########################################################################################
@@ -115,28 +115,41 @@ def fetch_genbank_file(species, Genomes) :
     :type: str
     '''
 
-    gbff_url = "{}/{}".format(species.ftp_path, species.ftp_file).replace('ftp:', 'https:')
-    
-    # print("-> Using or downloading/using {}".format(gbff_url))
-    loging.debug("-> Using or downloading/using {}".format(gbff_url))
-
-    gbff_response = requests.get(gbff_url)
-    md5_gbff = hashlib.md5(gbff_response.content)
-
     # check integrity of the file after download (note: if file was dezipped and rezipped it will not be recognized anymore)
     md5_gbk = pd.read_csv(StringIO(requests.get(
                         os.path.join(species.ftp_path.replace('ftp:', 'https:'),'md5checksums.txt')).text), 
                         names=['md5','assembly_files'], sep='\s+')
 
-    if md5_gbk[md5_gbk.assembly_files.str.contains(species.ftp_file)].md5.values == md5_gbff.hexdigest() :
+    ftp_location = {'ftp_gbff':GenBank,
+                     'ftp_fna':Genomes,
+                     'ftp_faa':Proteins, 
+                     'ftp_gff':Gff, 
+                     'ftp_gene':Genes, 
+                     'ftp_report':Assembly_report}
+
+    for ftp_file, local_folder in ftp_location.items():
+
+        gbff_url = "{}/{}".format(species.ftp_path, species[ftp_file]).replace('ftp:', 'https:')
         
-        # print("\n-> md5 CHECKED OK")
-        logging.debug('MD5 OK and checked for -> {genome}'.formar(genome=gbff_url))
+        loging.debug(f"-> Using or downloading/using {gbff_url}")
 
-    else :
-        logging.debug('Did not check, erasing the file -> {genome}'.formar(genome=gbff_url))
+        gbff_response = requests.get(gbff_url)
+        md5_gbff = hashlib.md5(gbff_response.content)
 
-    return 
+
+        if md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])].md5.values == md5_gbff.hexdigest() :
+            
+            # print("\n-> md5 CHECKED OK")
+            logging.debug(f'MD5 OK and checked for -> {gbff_url}')
+
+
+            file_name = os.path.join(local_folder, species[ftp_file].replace('.gz',''))
+            write_file_uncompress(gbff_response, file_name)
+
+        else :
+            logging.debug(f'Did not check, erasing the file -> {gbff_url}')
+
+        return 
 
 
 ##########################################################################################
@@ -148,7 +161,7 @@ def fetch_genbank_file(species, Genomes) :
 ##########################################################################################
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-     description=dedent("""Gembases Microbial Creation""") )
+     description=dedent("""ICTV Download and Creation""") )
 
 general_option = parser.add_argument_group(title = "General input dataset options")
 general_option.add_argument("-o",'--output',
@@ -246,6 +259,14 @@ if os.path.isfile(assembly_summary_viral_file) :
 else :
     assembly_summary_viral = get_assembly_file(viral_table_assembly)
     # Writing the assembly summary
+
+    assembly_summary_viral['ftp_gbff'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_genomic.gbff.gz".format(x.split('/')[-1]))
+    assembly_summary_viral['ftp_fna'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_genomic.fna.gz".format(x.split('/')[-1]))
+    assembly_summary_viral['ftp_faa'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_protein.faa.gz".format(x.split('/')[-1]))
+    assembly_summary_viral['ftp_gff'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_genomic.gff.gz".format(x.split('/')[-1]))
+    assembly_summary_viral['ftp_gene'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_cds_from_genomic.fna.gz".format(x.split('/')[-1]))
+    assembly_summary_viral['ftp_report'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_assembly_report.txt ".format(x.split('/')[-1]))
+
     assembly_summary_viral.to_csv(os.path.join(taxa, list_viral), index=False, sep='\t')
 
     logging.debug(f'{assembly_summary_viral_file} had been written')
@@ -258,47 +279,12 @@ print('\nDone!\n')
 logging.info('-> Creating all the files for each genomes in assembly summary')
 print('-> Creating all the files for each genomes in assembly summary')
 
-
+##### MULTIPROCESS ACTION
 stats_df = assembly_summary_modify.apply(fetch_genbank_file, axis=1)
-
-stats_df.sort_values('Mnemo',inplace=True)
-stats_df.to_csv(STATS_file, index=False, header=header_stats_write, sep='\t')
 
 logging.info('Done!')
 print('\nDone!\n')
 
-if args.concat_prot :
-    logging.info('-> Concatenating all the files for each genomes')
-    print('-> Concatenating all the files for each genomes')
+##### TODO RENAME OF FILES + MERGE_REPORT
 
-    all_prt = glob.glob(os.path.join(Proteins, '*prt'))
-
-    num_file = len(all_prt)
-
-    # Check number if files is less than 26
-    FINAL_NUM_FILE = args.concat_prot[1] if  1 < args.concat_prot[1] < 26 else 1
-
-    num_per_file = num_file // FINAL_NUM_FILE
-
-    if FINAL_NUM_FILE != 1 :
-        for index in range(FINAL_NUM_FILE) :
-            begin = index * num_per_file
-            end = (index + 1) * num_per_file if (index + 1) < 26 else -1
-
-            file_prot = os.path.join(Genomes, '{}.{}.{}.prot'.format(args.concat_prot[0], chr(ord('@')+number),VERSION_ID))
-
-            with open(file_prot, 'w') as w_file:
-                for prt_file in all_prt[begin:end] :
-                    seqs = SeqIO.parse(prt_file, 'fasta')
-                    SeqIO.write(seqs, w_file, 'fasta')
-    else :
-        file_prot = os.path.join(Genomes, '{}.{}.prot'.format(args.concat_prot[0], VERSION_ID))
-
-        with open(file_prot, 'w') as w_file:
-            for prt_file in all_prt :
-                seqs = SeqIO.parse(prt_file, 'fasta')
-                SeqIO.write(seqs, w_file, 'fasta') 
-
-    logging.info('Concatenation -> Done!')
-    print('\nDone!\n')
 ##########################################################################################
