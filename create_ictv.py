@@ -152,7 +152,16 @@ def fetch_genbank_file(species) :
                             os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
                             names=['md5','assembly_files'], sep='\s+')
     except:
-        logging.debug(f"EXCEPTION ERROR PARSING {os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')}")
+        # Because some url seems to not be updated in the assembly file
+        old_ftp = species['ftp_path']
+        new_ftp = old_ftp.replace(old_ftp.split('_')[-1], species['asm_name'])
+        species['ftp_path'] = new_ftp
+
+        logging.debug(f"Exception:: Change last url to correct {old_ftp} -> {new_ftp}")
+
+        md5_gbk = pd.read_csv(StringIO(session.get(
+                            os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
+                            names=['md5','assembly_files'], sep='\s+')        
 
     ftp_location = {'ftp_gbff':GenBank,
                      'ftp_fna':Genomes,
