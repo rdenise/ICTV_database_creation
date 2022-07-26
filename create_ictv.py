@@ -129,7 +129,7 @@ def fetch_genbank_file(species) :
 
         gbff_url = "{}/{}".format(species['ftp_path'], species[ftp_file]).replace('ftp:', 'https:')
         
-        loging.debug(f"-> Using or downloading/using {gbff_url}")
+        logging.debug(f"-> Using or downloading/using {gbff_url}")
 
         gbff_response = requests.get(gbff_url)
         md5_gbff = hashlib.md5(gbff_response.content)
