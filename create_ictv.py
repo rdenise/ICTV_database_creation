@@ -147,7 +147,7 @@ def fetch_genbank_file(species) :
         else :
             logging.debug(f'Did not check, erasing the file -> {gbff_url}')
 
-        return 
+    return 
 
 
 ##########################################################################################
