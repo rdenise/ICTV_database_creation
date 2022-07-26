@@ -135,6 +135,7 @@ def fetch_genbank_file(species) :
         gbff_response = requests.get(gbff_url)
         md5_gbff = hashlib.md5(gbff_response.content)
 
+        logging.debug(f"MD5 subdf for {species[ftp_file]}: {md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])]}")
 
         if md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])].md5.values == md5_gbff.hexdigest() :
             
