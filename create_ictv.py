@@ -15,14 +15,11 @@ import sys, os
 import pandas as pd
 import requests
 from io import StringIO, BytesIO
-import re
 import hashlib
 import gzip
-import Bio
-from Bio import SeqIO  
-from Bio import Seq 
 import logging
 from tqdm import tqdm
+import multiprocessing
 
 ##########################################################################################
 ##########################################################################################
@@ -100,10 +97,18 @@ def write_file_uncompress(gbff_response, local_filename) :
 
     return
 
-##########################################################################################
+
 ##########################################################################################
 
-def fetch_genbank_file(species, Genomes) :
+
+def star_fetch_genbank_file(args):
+    return fetch_genbank_file(*args)
+
+
+##########################################################################################
+
+
+def fetch_genbank_file(species) :
 
     '''
     Function that will fetch the concatenated and gzipped genbank file and create the id 
@@ -117,7 +122,7 @@ def fetch_genbank_file(species, Genomes) :
 
     # check integrity of the file after download (note: if file was dezipped and rezipped it will not be recognized anymore)
     md5_gbk = pd.read_csv(StringIO(requests.get(
-                        os.path.join(species.ftp_path.replace('ftp:', 'https:'),'md5checksums.txt')).text), 
+                        os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
                         names=['md5','assembly_files'], sep='\s+')
 
     ftp_location = {'ftp_gbff':GenBank,
@@ -129,7 +134,7 @@ def fetch_genbank_file(species, Genomes) :
 
     for ftp_file, local_folder in ftp_location.items():
 
-        gbff_url = "{}/{}".format(species.ftp_path, species[ftp_file]).replace('ftp:', 'https:')
+        gbff_url = "{}/{}".format(species['ftp_path'], species[ftp_file]).replace('ftp:', 'https:')
         
         loging.debug(f"-> Using or downloading/using {gbff_url}")
 
@@ -179,6 +184,17 @@ parser.add_argument("-v", "--verbosity",
                             action="count",
                             dest="verbosity",
                             help="Increase log verbosity could be : -v or -vv (default: -v)")
+general_option.add_argument(
+    "-t",
+    "--threads",
+    metavar="<num_threads>",
+    dest="threads",
+    help="Number of threads to use (default:1)",
+    required=True,
+    default=1,
+    type=int,
+    choices=range(1, multiprocessing.cpu_count()),
+)
 
 args = parser.parse_args()
 
@@ -206,7 +222,7 @@ logger = logging.getLogger()
 
 ##########################################################################################
 
-taxa = os.path.join(OUTPUT, f"ICTV_database_{args.date_stamp}")
+taxa = os.path.join(OUTPUT, "ICTV_database", f"{args.date_stamp}")
 Genomes = os.path.join(taxa, "Genomes")
 GenBank = os.path.join(taxa, "GenBank")
 Genes = os.path.join(taxa, "Genes")
@@ -280,7 +296,18 @@ logging.info('-> Creating all the files for each genomes in assembly summary')
 print('-> Creating all the files for each genomes in assembly summary')
 
 ##### MULTIPROCESS ACTION
-stats_df = assembly_summary_modify.apply(fetch_genbank_file, axis=1)
+args_func = assembly_summary_viral.to_dict('records')
+
+num_rows = assembly_summary_viral.shape[0]
+
+pool = multiprocessing.Pool(args.threads)
+results = list(
+    tqdm(
+        pool.imap(star_fetch_genbank_file, args_func), total=num_rows
+    )
+)
+pool.close()
+
 
 logging.info('Done!')
 print('\nDone!\n')
