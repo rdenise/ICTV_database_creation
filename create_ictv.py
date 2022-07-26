@@ -143,8 +143,10 @@ def fetch_genbank_file(species) :
     :type: str
     '''
 
+    global session
+
     # check integrity of the file after download (note: if file was dezipped and rezipped it will not be recognized anymore)
-    md5_gbk = pd.read_csv(StringIO(requests.get(
+    md5_gbk = pd.read_csv(StringIO(session.get(
                         os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
                         names=['md5','assembly_files'], sep='\s+')
 
@@ -162,7 +164,7 @@ def fetch_genbank_file(species) :
         
         logging.debug(f"-> Using or downloading/using {gbff_url}")
 
-        gbff_response = requests.get(gbff_url)
+        gbff_response = session.get(gbff_url)
         md5_gbff = hashlib.md5(gbff_response.content)
 
         sub_md5_gbff = md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])]
