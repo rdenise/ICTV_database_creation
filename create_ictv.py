@@ -89,10 +89,8 @@ def write_file(gbff_response, local_filename) :
     :type: requests.models.Response
     '''
 
-    with open(BytesIO(gbff_response.content), mode='rt') as r_file:  
-        with open(local_filename, 'wt') as w_file:      
-            for line in r_file:        
-                w_file.write(line)
+    with open(local_filename, 'wt') as w_file:      
+        w_file.write(gbff_response.text)
 
     return
 
