@@ -123,7 +123,8 @@ def fetch_genbank_file(species) :
                      'ftp_faa':Proteins, 
                      'ftp_gff':Gff, 
                      'ftp_gene':Genes, 
-                     'ftp_report':Assembly_report}
+                     'ftp_report':Assembly_report,
+                     }
 
     for ftp_file, local_folder in ftp_location.items():
 
@@ -274,7 +275,7 @@ else :
     assembly_summary_viral['ftp_faa'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_protein.faa.gz".format(x.split('/')[-1]))
     assembly_summary_viral['ftp_gff'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_genomic.gff.gz".format(x.split('/')[-1]))
     assembly_summary_viral['ftp_gene'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_cds_from_genomic.fna.gz".format(x.split('/')[-1]))
-    assembly_summary_viral['ftp_report'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_assembly_report.txt ".format(x.split('/')[-1]))
+    assembly_summary_viral['ftp_report'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_assembly_report.txt".format(x.split('/')[-1]))
 
     assembly_summary_viral.to_csv(assembly_summary_viral_file, index=False, sep='\t')
 
