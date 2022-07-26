@@ -101,13 +101,6 @@ def write_file_uncompress(gbff_response, local_filename) :
 ##########################################################################################
 
 
-def star_fetch_genbank_file(args):
-    return fetch_genbank_file(*args)
-
-
-##########################################################################################
-
-
 def fetch_genbank_file(species) :
 
     '''
@@ -303,7 +296,7 @@ num_rows = assembly_summary_viral.shape[0]
 pool = multiprocessing.Pool(args.threads)
 results = list(
     tqdm(
-        pool.imap(star_fetch_genbank_file, args_func), total=num_rows
+        pool.imap(fetch_genbank_file, args_func), total=num_rows
     )
 )
 pool.close()
