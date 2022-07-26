@@ -264,7 +264,7 @@ print(f"-> Fetching {viral_table_assembly}")
 
 # Test if the file exist before to not have problem if the assembly file of NCBI change between two run for the same MICROBIAL
 if os.path.isfile(assembly_summary_viral_file) :
-    assembly_summary_viral.read_table(os.path.join(taxa, list_bacteria))
+    assembly_summary_viral = pd.read_table(assembly_summary_viral_file)
 else :
     assembly_summary_viral = get_assembly_file(viral_table_assembly)
     # Writing the assembly summary
@@ -276,7 +276,7 @@ else :
     assembly_summary_viral['ftp_gene'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_cds_from_genomic.fna.gz".format(x.split('/')[-1]))
     assembly_summary_viral['ftp_report'] = assembly_summary_viral.ftp_path.apply(lambda x : "{}_assembly_report.txt ".format(x.split('/')[-1]))
 
-    assembly_summary_viral.to_csv(os.path.join(taxa, list_viral), index=False, sep='\t')
+    assembly_summary_viral.to_csv(assembly_summary_viral_file, index=False, sep='\t')
 
     logging.debug(f'{assembly_summary_viral_file} had been written')
  
