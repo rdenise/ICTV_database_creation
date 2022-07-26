@@ -22,6 +22,15 @@ from tqdm import tqdm
 import multiprocessing
 
 ##########################################################################################
+
+session = None
+data_to_be_processed = [...]
+
+def init_process():
+    global session
+    session = requests.Session()
+
+##########################################################################################
 ##########################################################################################
 ##
 ##                                Functions
@@ -320,7 +329,9 @@ args_func = assembly_summary_viral.to_dict('records')
 
 num_rows = assembly_summary_viral.shape[0]
 
-pool = multiprocessing.Pool(args.threads)
+
+
+pool = multiprocessing.Pool(args.threads, initializer=init_process)
 results = list(
     tqdm(
         pool.imap(fetch_genbank_file, args_func), total=num_rows
