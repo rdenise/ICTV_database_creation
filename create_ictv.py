@@ -73,6 +73,29 @@ def get_assembly_file(url) :
 
 
 ##########################################################################################
+
+
+def write_file(gbff_response, local_filename) :
+
+    '''
+    Function that will read the (multi) genbank file and extract the infornations
+    about each replicon.
+
+    :params species: row of the assembly dataframe
+    :type: pandas.Series
+    :params Genomes: Path to the Genomes folder
+    :type: str
+    :params gbff_response: The gz file from the ftp of assembly database
+    :type: requests.models.Response
+    '''
+
+    with open(BytesIO(gbff_response.content), mode='rt') as r_file:  
+        with open(local_filename, 'wt') as w_file:      
+            for line in r_file:        
+                w_file.write(line)
+
+    return
+
 ##########################################################################################
 
 
@@ -137,14 +160,18 @@ def fetch_genbank_file(species) :
 
         logging.debug(f"MD5 subdf for {species[ftp_file]}: {md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])]}")
 
-        if md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])].md5.values == md5_gbff.hexdigest() :
+        if md5_gbk[md5_gbk.assembly_files.str.contains(species[ftp_file])].md5.values[0] == md5_gbff.hexdigest() :
             
             # print("\n-> md5 CHECKED OK")
             logging.debug(f'MD5 OK and checked for -> {gbff_url}')
 
 
             file_name = os.path.join(local_folder, species[ftp_file].replace('.gz',''))
-            write_file_uncompress(gbff_response, file_name)
+
+            if species[ftp_file].endswith(".gz"):
+                write_file_uncompress(gbff_response, file_name)
+            else:
+                write_file(gbff_response, file_name)
 
         else :
             logging.debug(f'Did not check, erasing the file -> {gbff_url}')
