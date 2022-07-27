@@ -307,16 +307,16 @@ def create_metadata(
     ictv_xlsx, assembly_table, dict_ncid, dict_genbank, output_metadata
 ):
 
-    ictv_file = pd.read_excel(ictv_xlsx)
+    ictv_df = pd.read_excel(ictv_xlsx)
 
     # Change the list of GENBANK accession to list
-    ictv_file["Virus GENBANK accession"] = ictv_file["Virus GENBANK accession"].apply(
+    ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
         lambda x: x.split("; ") if x == x else ""
     )
     # Create one line per GENBANK accession ids
-    ictv_file = ictv_file.explode("Virus GENBANK accession")
+    ictv_df = ictv_df.explode("Virus GENBANK accession")
     # Take only the important part of the name
-    ictv_file["Virus GENBANK accession"] = ictv_file["Virus GENBANK accession"].apply(
+    ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
         lambda x: x.split(": ")[-1] if x == x else ""
     )
 
@@ -337,15 +337,19 @@ def create_metadata(
         "gbrs_paired_asm",
     ]
 
-    ictv_file = ictv_file.merge(
+    print(ictv_df)
+    print("-------")
+    print(assembly_table[name2keep_from_assembly])
+
+    ictv_df = ictv_df.merge(
         assembly_table[name2keep_from_assembly],
         on="Virus GENBANK accession",
         how="left",
     )
 
-    ictv_file.to_csv(output_metadata, index=False, sep="\t")
+    ictv_df.to_csv(output_metadata, index=False, sep="\t")
 
-    return ictv_file
+    return ictv_df
 
 
 ##########################################################################################
