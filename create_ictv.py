@@ -285,7 +285,10 @@ def get_info_report(report_files):
 
     dict_genbank = {}
     dict_ncid = {}
-    for report in tqdm(report_files, colour="GREEN"):
+
+    num_file = len(report_files)
+
+    for report in tqdm(report_files, colour="GREEN", total=num_file):
         name_GCA = "_".join(report.stem.split("_")[:2])
         ids = pd.read_table(report, comment="#", names=header_report)[
             ["GenBank-Accn", "RefSeq-Accn"]
