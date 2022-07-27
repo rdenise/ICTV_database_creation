@@ -286,7 +286,7 @@ def get_info_report(report_files):
     dict_genbank = {}
     dict_ncid = {}
 
-    num_file = len(report_files)
+    num_file = len(list(report_files))
 
     for report in tqdm(report_files, colour="GREEN", total=num_file):
         name_GCA = "_".join(report.stem.split("_")[:2])
