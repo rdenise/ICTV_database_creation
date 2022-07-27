@@ -443,7 +443,7 @@ general_option.add_argument(
     "--date_stamp",
     metavar="<DATE>",
     dest="date_stamp",
-    help=f"The time stamp: YYYYMMDD (e.g. {currentDate.strftime('%Y%m%d')} for {currentDate.strftime("%d %B, %Y")})",
+    help=f"The time stamp: YYYYMMDD (e.g. {currentDate.strftime('%Y%m%d')} for {currentDate.strftime('%d %B %Y')})",
     type=int,
     default=currentDate.strftime("%Y%m%d"),
 )
