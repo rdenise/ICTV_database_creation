@@ -23,10 +23,12 @@ from logging.handlers import QueueHandler, QueueListener
 from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
+import datetime
 
 ##########################################################################################
 
 session = None
+currentDate = datetime.date.today()
 
 ##########################################################################################
 ##########################################################################################
@@ -347,9 +349,9 @@ def rename_gene_files(gene_files):
 def concat_files():
 
     folder2concat = {
-                Genomes:"ICTV_all_genomes.fna",
-                Proteins:"ICTV_all_proteins.faa", 
-                Genes:"ICTV_all_genes.fna", 
+                Genomes:taxa / "ICTV_all_genomes.fna",
+                Proteins:taxa / "ICTV_all_proteins.faa", 
+                Genes:taxa / "ICTV_all_genes.fna", 
     }
 
     for folder, concat_file in folder2concat.items():
@@ -384,7 +386,7 @@ general_option.add_argument("-d",'--date_stamp',
                             dest="date_stamp",
                             help="The time stamp: YYYYMMDD (e.g. 20221016 for 16 october 2022)",
                             type=int,
-                            required=True)                            
+                            default=currentDate.strftime("%Y%m%d"))
 parser.add_argument("-v", "--verbosity", 
                             default=1,
                             action="count",
