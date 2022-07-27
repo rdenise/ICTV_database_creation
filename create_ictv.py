@@ -285,7 +285,7 @@ def get_info_report(report_files):
 
     dict_genbank = {}
     dict_ncid = {}
-    for report in report_files:
+    for report in tqdm(report_files, colour="00ff00"):
         name_GCA = "_".join(report.stem.split("_")[:2])
         ids = pd.read_table(report, comment="#", names=header_report)[
             ["GenBank-Accn", "RefSeq-Accn"]
@@ -570,7 +570,7 @@ num_rows = assembly_summary_viral.shape[0]
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows))
+results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows, colour="00ff00"))
 pool.close()
 queueListerner.stop()
 
