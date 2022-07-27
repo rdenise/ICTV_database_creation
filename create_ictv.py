@@ -206,7 +206,7 @@ def fetch_genbank_file(species):
     except:
         # Because some url seems to not be updated in the assembly file
         old_ftp = ftp_md5_path
-        new_ftp = old_ftp.replace(old_ftp.split("_")[-1], species["asm_name"])
+        new_ftp = old_ftp.replace(old_ftp.split("_")[-1], species["asm_name"]) + "/md5checksums.txt"
 
         logging.debug(f"Exception:: Change last url to correct {old_ftp} -> {new_ftp}")
 
@@ -507,7 +507,7 @@ else:
 
 queueListerner, mpQueue = logger_init(level)
 
-logging.info(f"Gembase creation logging for version : ICTV_database_{args.date_stamp}")
+logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stamp}\n")
 
 
 ##########################################################################################
@@ -520,7 +520,7 @@ assembly_summary_viral_file = taxa / list_viral
 
 ##########################################################################################
 
-logging.info(f"-> Fetching {viral_table_assembly}")
+logging.info(f"\n-> Fetching {viral_table_assembly}\n")
 print(f"-> Fetching {viral_table_assembly}")
 
 # Test if the file exist before to not have problem if the assembly file of NCBI change between two run for the same MICROBIAL
@@ -558,7 +558,7 @@ print("\nDone!\n")
 
 ##########################################################################################
 
-logging.info("-> Creating all the files for each genomes in assembly summary")
+logging.info("\n-> Creating all the files for each genomes in assembly summary\n")
 print("-> Creating all the files for each genomes in assembly summary")
 
 ##### MULTIPROCESS ACTION
@@ -577,7 +577,7 @@ logging.info("Done!")
 print("\nDone!\n")
 
 ##### TODO RENAME OF FILES + MERGE_REPORT
-logging.info("-> Creating metadata for the database")
+logging.info("\n-> Creating metadata for the database\n")
 print("-> Creating metadata for the database")
 
 Path()
@@ -595,7 +595,7 @@ logging.info("Done!")
 print("\nDone!\n")
 
 logging.info(
-    "-> Rename files based on virus species name, genbank accession and assembly accession"
+    "\n-> Rename files based on virus species name, genbank accession and assembly accession\n"
 )
 print(
     "-> Rename files based on virus species name, genbank accession and assembly accession"
@@ -611,7 +611,7 @@ rename_gene_files(Genes)
 logging.info("Done!")
 print("\nDone!\n")
 
-logging.info("-> Concatenation of Genomes, Genes and Proteins into one file each")
+logging.info("\n-> Concatenation of Genomes, Genes and Proteins into one file each\n")
 print("-> Concatenation of Genomes, Genes and Proteins into one file each")
 
 concat_files()
