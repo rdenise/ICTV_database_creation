@@ -11,7 +11,7 @@
 
 import argparse
 from unicodedata import name
-]from textwrap import dedent
+from textwrap import dedent
 import sys, os
 import pandas as pd
 import requests
@@ -304,7 +304,7 @@ def create_metadata(ictv_xlsx, assembly_table, dict_ncid, dict_genbank, output_m
 
 def rename_file(ictv_df, all_folders):
 
-    ictv_df['new_name'] = ictv_df.apply(lambda x: f"{x['Species']}_{x['Virus GENBANK accession']_{x['assembly_accession']}}")
+    ictv_df['new_name'] = ictv_df.apply(lambda x: f"{x['Species']}_{x['Virus GENBANK accession']}_{x['assembly_accession']}")
     GCA2name = ictv_df.set_index('assembly_accession').new_name.to_dict()
 
     for folder in all_folders:
@@ -340,6 +340,24 @@ def rename_gene_files(gene_files):
         tmp_file = Path(gene_file.parent, tmp_file)
         gene_file.unlink()
         tmp_file.rename(gene_file_name)
+
+    return
+##########################################################################################
+
+def concat_files():
+
+    folder2concat = {
+                Genomes:"ICTV_all_genomes.fna",
+                Proteins:"ICTV_all_proteins.faa", 
+                Genes:"ICTV_all_genes.fna", 
+    }
+
+    for folder, concat_file in folder2concat.items():
+        with open(concat_file, "wt") as w_file:
+            for myfile in folder.glob("*"):
+                with open(myfile) as r_file:
+                    for line in r_file:
+                        w_file.write(line)
 
     return
 
@@ -505,6 +523,14 @@ print('-> Rename files based on virus species name, genbank accession and assemb
 rename_file(ictv_df=ictv_df, all_folders=[Genomes, Genes, GenBank, Proteins, Gff, Assembly_report])
 
 rename_gene_files(Genes)
+
+logging.info('Done!')
+print('\nDone!\n')
+
+logging.info('-> Concatenation of Genomes, Genes and Proteins into one file each')
+print('-> Concatenation of Genomes, Genes and Proteins into one file each')
+
+concat_files()
 
 logging.info('Done!')
 print('\nDone!\n')
