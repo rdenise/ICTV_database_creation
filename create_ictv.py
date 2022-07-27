@@ -207,6 +207,7 @@ def fetch_genbank_file(species):
         # Because some url seems to not be updated in the assembly file
         old_ftp = ftp_md5_path
         new_ftp = old_ftp.replace(old_ftp.split("_")[-1], species["asm_name"]) + "/md5checksums.txt"
+        new_ftp = new_ftp.replace(" ", "_")
 
         logging.debug(f"Exception:: Change last url to correct {old_ftp} -> {new_ftp}")
 
@@ -442,7 +443,7 @@ general_option.add_argument(
     "--date_stamp",
     metavar="<DATE>",
     dest="date_stamp",
-    help="The time stamp: YYYYMMDD (e.g. 20221016 for 16 october 2022)",
+    help=f"The time stamp: YYYYMMDD (e.g. {currentDate.strftime('%Y%m%d')} for {currentDate.Day} {currentDate.ToString('MMMM')} {currentDate.Year})",
     type=int,
     default=currentDate.strftime("%Y%m%d"),
 )
