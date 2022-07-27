@@ -110,7 +110,7 @@ def get_assembly_file(url):
     """
     Function that will get the assembly file from the ncbi server
 
-    :params url: the url of the file (e.g. "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/viral/assembly_summary.txt")
+    :params url: the url of the file (e.g. "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/assembly_summary_genbank.txt")
     :type: str
     :return: A dataframe with the information of the assembly file
     :rtype: pandas.dataframe
