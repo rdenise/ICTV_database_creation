@@ -523,7 +523,7 @@ logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stam
 
 list_viral = "viral_assembly_summary.txt"
 viral_table_assembly = (
-    "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/viral/assembly_summary.txt"
+    "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/assembly_summary_genbank.txt"
 )
 assembly_summary_viral_file = taxa / list_viral
 
