@@ -40,9 +40,47 @@ currentDate = datetime.date.today()
 ##########################################################################################
 
 
+def logger_init(level):
+    mpQueue = multiprocessing.Queue()
+
+    LOG_FORMAT = "%(levelname)s::%(asctime)s - %(message)s"
+    logging.basicConfig(
+        filename=os.path.join(args.output, "ictv_downloading.log"),
+        level=level,
+        format=LOG_FORMAT,
+        filemode="w",
+    )
+
+    # this is the handler for all log records
+    handler = logging.FileHandler(filename=os.path.join(args.output, "ictv_downloading.log"), mode="w")
+    LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
+    handler.setFormatter(logging.Formatter(LOG_FORMAT_HANDLER))
+
+    # queueListerner gets records from the queue and sends them to the handler
+    queueListerner = QueueListener(mpQueue, handler)
+    queueListerner.start()
+
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    # add the handler to the logger so records from this process are handled
+    logger.addHandler(handler)
+    logger.addHandler(handler)
+
+    return queueListerner, mpQueue
+
+
+##########################################################################################
+
+
 def init_process(mpQueue, level):
     global session
     session = requests.Session()
+
+    # all records from worker processes go to queueHandler and then into mpQueue
+    queueHandler = QueueHandler(mpQueue)
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    logger.addHandler(queueHandler)
 
 
 ##########################################################################################
@@ -467,14 +505,7 @@ elif args.verbosity == 2:
 else:
     level = logging.NOTSET
 
-
-LOG_FORMAT = '%(levelname)s::%(asctime)s - %(message)s'
-logging.basicConfig(filename = os.path.join(args.output, 'ictv_downloading.log'),
-                    level = level,
-                    format = LOG_FORMAT,
-                    filemode = 'w')
-
-logger = logging.getLogger()
+queueListerner, mpQueue = logger_init(level)
 
 logging.info(f"Gembase creation logging for version : ICTV_database_{args.date_stamp}")
 
@@ -536,7 +567,7 @@ args_func = assembly_summary_viral.to_dict("records")
 num_rows = assembly_summary_viral.shape[0]
 
 pool = multiprocessing.Pool(
-    processes=args.threads, initializer=init_process
+    processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
 results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows))
 pool.close()
