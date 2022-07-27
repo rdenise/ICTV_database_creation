@@ -351,7 +351,8 @@ def create_metadata(
 def rename_file(ictv_df, all_folders):
 
     ictv_df["new_name"] = ictv_df.apply(
-        lambda x: f"{x['Species']}_{x['Virus GENBANK accession']}_{x['assembly_accession']}"
+        lambda x: f"{x['Species']}_{x['Virus GENBANK accession']}_{x['assembly_accession']}",
+        axis=1,
     )
     GCA2name = ictv_df.set_index("assembly_accession").new_name.to_dict()
 
