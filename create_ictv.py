@@ -10,8 +10,8 @@
 ##########################################################################################
 
 import argparse
-from genericpath import isfile
-from textwrap import dedent
+from unicodedata import name
+]from textwrap import dedent
 import sys, os
 import pandas as pd
 import requests
@@ -19,17 +19,14 @@ from io import StringIO, BytesIO
 import hashlib
 import gzip
 import logging
+from logging.handlers import QueueHandler, QueueListener
 from tqdm import tqdm
 import multiprocessing
+from pathlib import Path
 
 ##########################################################################################
 
 session = None
-data_to_be_processed = [...]
-
-def init_process():
-    global session
-    session = requests.Session()
 
 ##########################################################################################
 ##########################################################################################
@@ -39,6 +36,44 @@ def init_process():
 ##########################################################################################
 ##########################################################################################
 
+def logger_init():
+    mpQueue = multiprocessing.Queue()
+
+    LOG_FORMAT = '%(levelname)s::%(asctime)s - %(message)s'
+    logging.basicConfig(filename = os.path.join(args.output, 'ictv_downloading.log'),
+                        level = level,
+                        format = LOG_FORMAT,
+                        filemode = 'w')
+
+    # this is the handler for all log records
+    handler = logging.StreamHandler()
+    LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
+    handler.setFormatter(logging.Formatter(LOG_FORMAT_HANDLER))
+
+    # queueListerner gets records from the queue and sends them to the handler
+    queueListerner = QueueListener(mpQueue, handler)
+    queueListerner.start()
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    # add the handler to the logger so records from this process are handled
+    logger.addHandler(handler)
+
+    return queueListerner, mpQueue
+
+##########################################################################################
+
+def init_process(mpQueue):
+    global session
+    session = requests.Session()
+
+    # all records from worker processes go to queueHandler and then into mpQueue
+    queueHandler = QueueHandler(mpQueue)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(queueHandler)
+
+##########################################################################################
 
 def create_folder(mypath):
 
@@ -57,7 +92,6 @@ def create_folder(mypath):
     return
 
 
-##########################################################################################
 ##########################################################################################
 
 
@@ -147,35 +181,37 @@ def fetch_genbank_file(species) :
     global session
 
     # check integrity of the file after download (note: if file was dezipped and rezipped it will not be recognized anymore)
+    ftp_md5_path = f"{species['ftp_path'].replace('ftp:', 'https:')}/md5checksums.txt"
+
     try: 
         md5_gbk = pd.read_csv(StringIO(session.get(
-                            os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
+                            ftp_md5_path).text), 
                             names=['md5','assembly_files'], sep='\s+')
     except:
         # Because some url seems to not be updated in the assembly file
-        old_ftp = species['ftp_path']
+        old_ftp = ftp_md5_path
         new_ftp = old_ftp.replace(old_ftp.split('_')[-1], species['asm_name'])
-        species['ftp_path'] = new_ftp
 
         logging.debug(f"Exception:: Change last url to correct {old_ftp} -> {new_ftp}")
 
         md5_gbk = pd.read_csv(StringIO(session.get(
-                            os.path.join(species['ftp_path'].replace('ftp:', 'https:'),'md5checksums.txt')).text), 
+                            new_ftp).text), 
                             names=['md5','assembly_files'], sep='\s+')        
 
-    ftp_location = {'ftp_gbff':GenBank,
-                     'ftp_fna':Genomes,
-                     'ftp_faa':Proteins, 
-                     'ftp_gff':Gff, 
-                     'ftp_gene':Genes, 
-                     'ftp_report':Assembly_report,
-                     }
+    ftp_location = {
+                'ftp_gbff':GenBank,
+                'ftp_fna':Genomes,
+                'ftp_faa':Proteins, 
+                'ftp_gff':Gff, 
+                'ftp_gene':Genes, 
+                'ftp_report':Assembly_report,
+                }
 
     for ftp_file, local_folder in ftp_location.items():
 
-        file_name = os.path.join(local_folder, species[ftp_file].replace('.gz',''))
+        file_name = local_folder / species[ftp_file].replace('.gz','')
 
-        if not os.path.isfile(file_name):
+        if not file_name.is_file():
             gbff_url = "{}/{}".format(species['ftp_path'], species[ftp_file]).replace('ftp:', 'https:')
             
             logging.debug(f"-> Using or downloading/using {gbff_url}")
@@ -202,6 +238,110 @@ def fetch_genbank_file(species) :
 
     return 
 
+##########################################################################################
+
+def get_info_report(report_files):
+
+    header_report = [
+                "Sequence-Name", 
+                "Sequence-Role",
+                "Assigned-Molecule",
+                "Assigned-Molecule-Location/Type",
+                "GenBank-Accn",
+                "Relationship",
+                "RefSeq-Accn",
+                "Assembly-Unit",
+                "Sequence-Length",
+                "UCSC-style-name",
+                ]
+
+    dict_genbank = {}
+    dict_ncid = {}
+    for report in report_files:
+        name_GCA = '_'.join(report.stem.split('_')[:2])
+        ids = pd.read_table(report, comment='#', names=header_report)[['GenBank-Accn', 'RefSeq-Accn']]
+        for index, genbank, ncid in ids.itertuples():
+            dict_genbank[name_GCA] = genbank.split('.')[0]
+            dict_ncid[name_GCA] = ncid
+
+    return dict_genbank, dict_ncid
+
+##########################################################################################
+
+def create_metadata(ictv_xlsx, assembly_table, dict_ncid, dict_genbank, output_metadata):
+
+    ictv_file = pd.read_excel(ictv_xlsx)
+
+    # Change the list of GENBANK accession to list
+    ictv_file['Virus GENBANK accession'] = ictv_file['Virus GENBANK accession'].apply(lambda x: x.split('; ') if x == x else '')
+    # Create one line per GENBANK accession ids
+    ictv_file = ictv_file.explode('Virus GENBANK accession')
+    # Take only the important part of the name
+    ictv_file['Virus GENBANK accession'] = ictv_file['Virus GENBANK accession'].apply(lambda x: x.split(': ')[-1] if x == x else '')
+
+    # Get the assembly table and add the new columns
+    assembly_table['NC_Id'] = assembly_table.assembly_accession.map(dict_ncid)
+    assembly_table['Virus GENBANK accession'] = assembly_table.assembly_accession.map(dict_genbank)
+
+    name2keep_from_assembly = [
+                    'assembly_accession',
+                    'NC_Id',
+                    'Virus GENBANK accession',
+                    'bioproject',
+                    'taxid',
+                    'species_taxid',
+                    'asm_name',
+                    'gbrs_paired_asm'
+                    ]
+
+    ictv_file = ictv_file.merge(assembly_table[name2keep_from_assembly], on='Virus GENBANK accession', how='left')
+
+    ictv_file.to_csv(output_metadata, index=False, sep='\t')
+
+    return ictv_file
+
+##########################################################################################
+
+def rename_file(ictv_df, all_folders):
+
+    ictv_df['new_name'] = ictv_df.apply(lambda x: f"{x['Species']}_{x['Virus GENBANK accession']_{x['assembly_accession']}}")
+    GCA2name = ictv_df.set_index('assembly_accession').new_name.to_dict()
+
+    for folder in all_folders:
+        for myfile in folder.glob('*'):
+            myfile_GCA = "_".join(myfile.stem.split("_")[:2])
+            myfile_ext = myfile.suffix
+
+            myfile_GCA = GCA2name(myfile_GCA)
+
+            logging.info(f"Renaming {myfile.name} to {myfile_GCA + myfile_ext}")
+
+            myfile.rename(Path(myfile.parent, myfile_GCA + myfile_ext))
+
+    return 
+
+##########################################################################################
+
+def rename_gene_files(gene_files):
+
+    for gene_file in gene_files:
+        parser = SeqIO.parse(gene_file, 'fasta')
+
+        tmp_file = str(gene_file) + ".tmp"
+        gene_file_name = str(gene_file)
+
+        with open(tmp_file, 'wt') as w_file:
+            for gene in parser:
+                gene.id = " gene_index:".join(gene.id.split("_")[-2:])
+                gene.name = ""
+
+                SeqIO.write(gene, w_file, "fasta")
+
+        tmp_file = Path(gene_file.parent, tmp_file)
+        gene_file.unlink()
+        tmp_file.rename(gene_file_name)
+
+    return
 
 ##########################################################################################
 ##########################################################################################
@@ -216,14 +356,16 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
 
 general_option = parser.add_argument_group(title = "General input dataset options")
 general_option.add_argument("-o",'--output',
-                            default=None,
+                            default=os.getcwd(),
                             dest="output",
                             metavar='<FOLDER>',
-                            help="Folder where to put the database (default: $PWD)")
+                            type=str,
+                            help=f"Folder where to put the database (default: {os.getcwd()})")
 general_option.add_argument("-d",'--date_stamp',
                             metavar="<DATE>",
                             dest="date_stamp",
-                            help="The time stamp: MMYY (e.g. 1016 for october 2016)",
+                            help="The time stamp: YYYYMMDD (e.g. 20221016 for 16 october 2022)",
+                            type=int,
                             required=True)                            
 parser.add_argument("-v", "--verbosity", 
                             default=1,
@@ -241,41 +383,28 @@ general_option.add_argument(
     type=int,
     choices=range(1, multiprocessing.cpu_count()),
 )
+general_option.add_argument(
+    "-ictv",
+    "--ictv_metadata",
+    metavar="<ictv_metadata_table>",
+    dest="ictv_metadata",
+    help="Path to the ICTV taxonomy table that contain the Genbank Id",
+    required=True,
+    default="",
+    type=str,
+)
 
 args = parser.parse_args()
 
 ##########################################################################################
 
-if args.output :
-    OUTPUT = args.output
-else :
-    OUTPUT = os.getcwd()
-
-##########################################################################################
-
-if args.verbosity == 1 :
-    level = logging.INFO
-else : 
-    level = logging.DEBUG
-
-LOG_FORMAT = '%(levelname)s::%(asctime)s - %(message)s'
-logging.basicConfig(filename = os.path.join(OUTPUT, 'ictv_downloading.log'),
-                    level = level,
-                    format = LOG_FORMAT,
-                    filemode = 'w')
-
-logger = logging.getLogger()
-
-##########################################################################################
-
-taxa = os.path.join(OUTPUT, "ICTV_database", f"{args.date_stamp}")
-Genomes = os.path.join(taxa, "Genomes")
-GenBank = os.path.join(taxa, "GenBank")
-Genes = os.path.join(taxa, "Genes")
-Proteins = os.path.join(taxa, "Proteins")
-Gff = os.path.join(taxa, "Gff")
-Assembly_report = os.path.join(taxa, "Assembly_Reports")
-
+taxa = Path(args.output) / "ICTV_database" / f"{args.date_stamp}"
+Genomes = taxa / "Genomes"
+GenBank = taxa / "GenBank"
+Genes = taxa / "Genes"
+Proteins = taxa / "Proteins"
+Gff = taxa / "Gff"
+Assembly_report = taxa / "Assembly_Reports"
 
 create_folder(taxa)
 create_folder(Genomes)
@@ -294,21 +423,16 @@ elif args.verbosity == 2 :
 else : 
     level = logging.NOTSET
 
-LOG_FORMAT = '%(levelname)s::%(asctime)s - %(message)s'
-logging.basicConfig(filename = os.path.join(taxa, 'do_gembase.log'),
-                    level = level,
-                    format = LOG_FORMAT,
-                    filemode = 'w')
-
-logger = logging.getLogger()
+queueListerner, mpQueue = logger_init()
 
 logging.info(f'Gembase creation logging for version : ICTV_database_{args.date_stamp}')
+
 
 ##########################################################################################
 
 list_viral = "viral_assembly_summary.txt"
 viral_table_assembly = "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/viral/assembly_summary.txt"
-assembly_summary_viral_file = os.path.join(taxa, list_viral)
+assembly_summary_viral_file = taxa / list_viral
 
 ##########################################################################################
 
@@ -316,7 +440,7 @@ logging.info(f"-> Fetching {viral_table_assembly}")
 print(f"-> Fetching {viral_table_assembly}")
 
 # Test if the file exist before to not have problem if the assembly file of NCBI change between two run for the same MICROBIAL
-if os.path.isfile(assembly_summary_viral_file) :
+if assembly_summary_viral_file.is_file() :
     assembly_summary_viral = pd.read_table(assembly_summary_viral_file)
 else :
     assembly_summary_viral = get_assembly_file(viral_table_assembly)
@@ -346,20 +470,43 @@ args_func = assembly_summary_viral.to_dict('records')
 
 num_rows = assembly_summary_viral.shape[0]
 
-
-
-pool = multiprocessing.Pool(args.threads, initializer=init_process)
+pool = multiprocessing.Pool(processes=args.threads, initializer=init_process, initargs=[mpQueue])
 results = list(
     tqdm(
         pool.imap(fetch_genbank_file, args_func), total=num_rows
     )
 )
 pool.close()
-
+queueListerner.stop()
 
 logging.info('Done!')
 print('\nDone!\n')
 
 ##### TODO RENAME OF FILES + MERGE_REPORT
+logging.info('-> Creating metadata for the database')
+print('-> Creating metadata for the database')
+
+Path()
+
+dict_genbank, dict_ncid = get_info_report(Assembly_report.glob("*txt"))
+ictv_df = create_metadata(
+                    ictv_xlsx=args.ictv_metadata,
+                    assembly_table=assembly_summary_viral,
+                    dict_ncid=dict_ncid,
+                    dict_genbank=dict_genbank,
+                    output_metadata=taxa / "ICTV_metadata.tsv")
+
+logging.info('Done!')
+print('\nDone!\n')
+
+logging.info('-> Rename files based on virus species name, genbank accession and assembly accession')
+print('-> Rename files based on virus species name, genbank accession and assembly accession')
+
+rename_file(ictv_df=ictv_df, all_folders=[Genomes, Genes, GenBank, Proteins, Gff, Assembly_report])
+
+rename_gene_files(Genes)
+
+logging.info('Done!')
+print('\nDone!\n')
 
 ##########################################################################################
