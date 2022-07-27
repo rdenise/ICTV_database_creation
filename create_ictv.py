@@ -10,6 +10,7 @@
 ##########################################################################################
 
 import argparse
+from stat import filemode
 from unicodedata import name
 from textwrap import dedent
 import sys, os
@@ -51,7 +52,7 @@ def logger_init(level):
     )
 
     # this is the handler for all log records
-    handler = logging.FileHandler()
+    handler = logging.FileHandler(filename=os.path.join(args.output, "ictv_downloading.log"))
     LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
     handler.setFormatter(logging.Formatter(LOG_FORMAT_HANDLER))
 
