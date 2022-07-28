@@ -374,11 +374,9 @@ def gbk2lst(replicon, lst_file) :
         note = ' '.join(sequence.qualifiers['note'])
         tmp_dict['product_note'].append(f'|{product}|{note}')
 
-        logging.debug(f"Protein: {sequence.qualifiers['translation'][0]}")
-        logging.debug(f"Gene: {sequence.extract(replicon).seq}")
-
-        tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
-        tmp_dict['sequence_nt'].append(sequence.extract(replicon).seq)
+        if tmp_dict['type'] == "CDS"
+            tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
+            tmp_dict['sequence_nt'].append(sequence.extract(replicon).seq)
 
     df = pd.DataFrame(tmp_dict)
 
