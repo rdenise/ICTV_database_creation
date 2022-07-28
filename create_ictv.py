@@ -397,7 +397,11 @@ def gbk2lst(replicon, lst_file) :
 
         if tmp_dict['type'][-1] == "CDS":
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
-            tmp_dict['sequence_nt'].append(sequence.extract(replicon).seq.tostring())
+            tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).seq))
+
+        logging.debug(f"{type(sequence.extract(replicon).seq)}")
+        logging.debug(f"{str(sequence.extract(replicon).seq)}")
+        logging.debug(f"{type(str(sequence.extract(replicon).seq))}")
 
     df = pd.DataFrame(tmp_dict)
 
