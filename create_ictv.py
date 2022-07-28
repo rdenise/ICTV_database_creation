@@ -364,7 +364,7 @@ def gbk2lst(replicon, lst_file) :
         if tmp_dict['status'][-1] == '' :
             if 'pseudo' in sequence.qualifiers :
                 tmp_dict['status'][-1] = 'Pseudo'
-            elif 'frameshift' in ' '.join(sequence.qualifiers['note']).lower() : 
+            elif 'note' in sequence.qualifiers and 'frameshift' in ' '.join(sequence.qualifiers['note']).lower() : 
                 tmp_dict['status'][-1] = 'Invalid_Size'
             else :
                 tmp_dict['status'][-1] = 'Valid'
