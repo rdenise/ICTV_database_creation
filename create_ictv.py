@@ -10,7 +10,6 @@
 ##########################################################################################
 
 import argparse
-from glob import glob
 from textwrap import dedent
 import sys, os
 import pandas as pd
@@ -142,41 +141,62 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     accGenBank, nameFile = accGenBank_nameFile
 
-    logging.debug(f"-> Downloading the identifier {accGenBank}")
-
-    handle = Entrez.efetch(db="nucleotide", rettype="gbwithparts", retmode="text",
-                          id=accGenBank)
-
-    gbk = SeqIO.read(handle, 'genbank')
-
-    logging.debug(f"-> Creating: {nameFile}.gbk")
-
     gbk_file = GenBank / f"{nameFile}.gbk"
+    
+    if gbk.is_file():
+        logging.debug(f"-> Reading: {nameFile}.gbk")
+    
+        gbk = SeqIO.read(gbk_file, "genbank")
+    else:
+        logging.debug(f"-> Downloading the identifier {accGenBank}")
 
-    SeqIO.write(gbk, gbk_file, format='genbank')
+        handle = Entrez.efetch(db="nucleotide", rettype="gbwithparts", retmode="text",
+                            id=accGenBank)
 
-    logging.debug(f"-> Creating: {nameFile}.gff")
+        gbk = SeqIO.read(handle, 'genbank')
+
+        logging.debug(f"-> Creating: {nameFile}.gbk")
+
+
+        SeqIO.write(gbk, gbk_file, format='genbank')
 
     gff_file = Gff / f"{nameFile}.gff"
-    gbk2gff3(gbk_file=gbk_file, outfile=gff_file)
+    
+    if not gff_file.is_file():
+        logging.debug(f"-> Creating: {nameFile}.gff")
 
-    logging.debug(f"-> Creating: {nameFile}.fna")
+        gbk2gff3(gbk_file=gbk_file, outfile=gff_file)
 
     fasta_file = Genomes / f"{nameFile}.fna"
-    gbk2fasta(replicon=gbk, fasta_file=fasta_file)
 
-    # create a file to quickly have the informations 
-    lst_df = gbk2lst(gbk)
+    if not fasta_file.is_file():
+        logging.debug(f"-> Creating: {nameFile}.fna")
 
-    logging.debug(f"-> Creating: {nameFile}.gene.fna")
+        gbk2fasta(replicon=gbk, fasta_file=fasta_file)
+
+    lst_file = Lst / f"{nameFile}.lst"
+
+    if lst_file.is_file():
+        logging.debug(f"-> Reading: {nameFile}.gbk")
+
+        lst_df = pd.read_table(lst_file)
+    else:
+        # create a file to quickly have the informations 
+        logging.debug(f"-> Creating: {nameFile}.lst")
+
+        lst_df = gbk2lst(gbk=gbk, lst_file=lst_file)
 
     gen_file = Genes / f"{nameFile}.genes.fna"
-    valid_df = gbk2gen(df_lst=lst_df, gen_file=gen_file)
     
-    logging.debug(f"-> Creating: {nameFile}.faa")
+    if not prt_file.is_file(): 
+        logging.debug(f"-> Creating: {nameFile}.gene.fna")
 
-    prt_file = Proteins / f"{nameFile}.faa"
-    gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
+        valid_df = gbk2gen(df_lst=lst_df, gen_file=gen_file)
+        
+        logging.debug(f"-> Creating: {nameFile}.faa")
+
+        prt_file = Proteins / f"{nameFile}.faa"
+        gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
     return 
 
@@ -193,11 +213,12 @@ def concat_files():
     }
 
     for folder, concat_file in folder2concat.items():
-        with open(concat_file, "wt") as w_file:
-            for myfile in folder.glob("*"):
-                with open(myfile) as r_file:
-                    for line in r_file:
-                        w_file.write(line)
+        if not concat_file.is_file():
+            with open(concat_file, "wt") as w_file:
+                for myfile in tqdm(folder.glob("*"), colour="GREEN"):
+                    with open(myfile) as r_file:
+                        for line in tqdm(r_file, colour="BLUE", leave=False):
+                            w_file.write(line)
 
     return
 
@@ -239,7 +260,7 @@ def gbk2fasta(replicon, fasta_file) :
     
 ##########################################################################################
 
-def gbk2lst(replicon) :
+def gbk2lst(replicon, lst_file) :
 
     '''
     Function that will create the .lst file for a specific replicon
@@ -343,6 +364,8 @@ def gbk2lst(replicon) :
 
 
     df = pd.DataFrame(tmp_dict)
+
+    df.to_csv(lst_file, index=False, sep='\t')
 
     counter_lst.increment()
     pbar_lst.update(counter_lst.value())
@@ -542,6 +565,7 @@ GenBank = taxa / "GenBank"
 Genes = taxa / "Genes"
 Proteins = taxa / "Proteins"
 Gff = taxa / "Gff"
+Lst = taxa / "Lst"
 
 create_folder(taxa)
 create_folder(Genomes)
@@ -549,6 +573,7 @@ create_folder(GenBank)
 create_folder(Genes)
 create_folder(Proteins)
 create_folder(Gff)
+create_folder(Lst)
 
 ##########################################################################################
 
@@ -618,7 +643,7 @@ logging.info("\n-> Creating all the files for each genomes in ICTV\n")
 print("-> Creating all the files for each genomes in ICTV")
 
 ##### MULTIPROCESS ACTION
-args_func = ictv_df[["Virus GENBANK accession", "File_identidier"]].to_dict("records")
+args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
 
 
 pool = multiprocessing.Pool(
