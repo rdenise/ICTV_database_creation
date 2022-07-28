@@ -467,7 +467,7 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
 
     # Transform the features of the gbk into a dict with the name of the locus_tag as key and feature as value
     # Allow to keep the order of the .lst file but using the translation of the .gbk without calculate it
-    dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict['records']
+    dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict('records')
 
     # List of all the proteins to write
     proteins = []
