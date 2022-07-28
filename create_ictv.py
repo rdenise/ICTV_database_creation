@@ -461,6 +461,7 @@ def gbk2gen(df_lst, gen_file) :
         all_starts.append(start_codon)
         all_stops.append(stop_codon)
 
+        logging.debug(f"{gene_seq}")
 
     df_lst_Valid_CDS['description_gembase'] = all_descriptions
     df_lst_Valid_CDS['start_codon'] = all_starts
