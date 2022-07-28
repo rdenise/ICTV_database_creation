@@ -423,9 +423,9 @@ def gbk2gen(df_lst, gen_file) :
         gene_seq.id = sequence['synonyms']
         gene_seq.name = ''
 
-        list_description = [sequence.strand, start_codon, stop_codon, str(sequence.start), str(sequence.end),
-                       sequence.gene, size_gene, sequence.synonyms, sequence.locus_tag,
-                       sequence.nexons, sequence.positions, product_note]
+        list_description = [sequence['strand'], start_codon, stop_codon, str(sequence['start']), str(sequence['end']),
+                       sequence['gene'], size_gene, sequence['synonyms'], sequence['locus_tag'],
+                       sequence['nexons'], sequence['positions'], product_note]
 
         gene_seq.description = ' '.join(list_description)
 
@@ -594,26 +594,20 @@ print("-> Reading all the information on ICTV and exploding the identifiers")
 ictv_df = pd.read_excel(args.ictv_metadata)
 ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
 
-tqdm.pandas(desc="Step1", colour="GREEN")
-
 # Change the list of GENBANK accession to list
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].progress_apply(
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split("; ") if x == x else ""
 )
 # Create one line per GENBANK accession ids
 ictv_df = ictv_df.explode("Virus GENBANK accession")
 
-tqdm.pandas(desc="Step2", colour="GREEN")
-
 # Take only the important part of the name
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].progress_apply(
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split(": ")[-1] if x == x else ""
 )
 
-tqdm.pandas(desc="Creating names", colour="GREEN")
-
 # Changing the name to have a good one Species.Notes.GenBankAcc
-ictv_df["File_identifier"] = ictv_df.progress_apply(
+ictv_df["File_identifier"] = ictv_df.apply(
     lambda x: f"{x.Species.replace(' ', '_')}.{x.Sort}.{x['Virus GENBANK accession']}",
     axis = 1
 )
