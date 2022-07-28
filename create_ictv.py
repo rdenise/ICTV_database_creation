@@ -298,7 +298,6 @@ def gbk2lst(replicon, lst_file) :
         'end':[],
         'strand':[],
         'type':[],
-        'gembase_Id':[],
         'gene':[],
         'status':[],
         'synonyms':[],
@@ -377,9 +376,6 @@ def gbk2lst(replicon, lst_file) :
 
         tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'])
         tmp_dict['sequence_nt'].append(sequence.extract(replicon))
-
-    logging.debug(f"{[len(i) for key, i in tmp_dict.items()]}")
-    logging.debug(f"{[key for key, i in tmp_dict.items()]}")
 
     df = pd.DataFrame(tmp_dict)
 
