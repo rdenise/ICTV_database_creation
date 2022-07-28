@@ -649,7 +649,7 @@ args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("rec
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows, colour="GREEN", desc="Completely done", position=0))
+results = list(tqdm(pool.imap(efetch_accession2gbk, args_func), total=num_rows, colour="GREEN", desc="Completely done", position=0))
 pool.close()
 queueListerner.stop()
 
