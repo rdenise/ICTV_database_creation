@@ -130,7 +130,7 @@ def create_folder(mypath):
 ##########################################################################################
 
 
-def efetch_accession2gbk(accGenBank, nameFile):
+def efetch_accession2gbk(accGenBank_nameFile):
     """
     Function that will get the assembly file from the ncbi server
 
@@ -142,6 +142,9 @@ def efetch_accession2gbk(accGenBank, nameFile):
 
     global counter_gbk
     global pbar_gbk
+
+    accGenBank = accGenBank_nameFile['Virus GENBANK accession']
+    nameFile = accGenBank_nameFile['File_identifier']
 
     gbk_file = GenBank / f"{nameFile}.gbk"
     
@@ -625,7 +628,7 @@ tqdm.pandas(desc="Creating names", colour="GREEN")
 
 # Changing the name to have a good one Species.Notes.GenBankAcc
 ictv_df["File_identifier"] = ictv_df.progress_apply(
-    lambda x: f"{x.Species}.{x.Sort}.{x['Virus GENBANK accession']}",
+    lambda x: f"{x.Species.replace(" ", "_")}.{x.Sort}.{x['Virus GENBANK accession']}",
     axis = 1
 )
 
@@ -636,12 +639,12 @@ ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 num_rows = ictv_df.shape[0]
 
 # RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
-pbar_gbk =tqdm(desc="Completely done", colour="GREEN", position=0, total=num_rows) 
-pbar_gff =tqdm(desc="Gff processed", colour="CYAN", position=1, total=num_rows) 
-pbar_fna =tqdm(desc="Lst processed", colour="BLUE", position=2, total=num_rows) 
-pbar_lst =tqdm(desc="Fna processed", colour="MAGENTA", position=3, total=num_rows) 
-pbar_gene_fna =tqdm(desc="Gen processed", colour="RED", position=4, total=num_rows) 
-pbar_faa =tqdm(desc="Prt processed", colour="YELLOW", position=5, total=num_rows) 
+pbar_gbk =tqdm(desc="Completely done", colour="GREEN", position=1, total=num_rows) 
+pbar_gff =tqdm(desc="Gff processed", colour="CYAN", position=2, total=num_rows) 
+pbar_fna =tqdm(desc="Lst processed", colour="BLUE", position=3, total=num_rows) 
+pbar_lst =tqdm(desc="Fna processed", colour="MAGENTA", position=4, total=num_rows) 
+pbar_gene_fna =tqdm(desc="Gen processed", colour="RED", position=5, total=num_rows) 
+pbar_faa =tqdm(desc="Prt processed", colour="YELLOW", position=6, total=num_rows) 
 
 ##########################################################################################
 
@@ -655,7 +658,7 @@ args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("rec
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(pool.starmap(efetch_accession2gbk, args_func))
+results = list(pool.imap(efetch_accession2gbk, args_func))
 pool.close()
 queueListerner.stop()
 
