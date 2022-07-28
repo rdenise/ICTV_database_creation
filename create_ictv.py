@@ -50,6 +50,7 @@ currentDate = datetime.date.today()
 Entrez.email = "rdenise@ucc.ie"
 Entrez.tool = "create_ictv.py"
 
+counter_gbk = Counter()
 counter_faa = Counter()
 counter_fna = Counter()
 counter_gene_fna = Counter()
@@ -139,6 +140,9 @@ def efetch_accession2gbk(accGenBank_nameFile):
     :rtype: pandas.dataframe
     """
 
+    global counter_gbk
+    global pbar_gbk
+
     accGenBank, nameFile = accGenBank_nameFile
 
     gbk_file = GenBank / f"{nameFile}.gbk"
@@ -197,6 +201,9 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         prt_file = Proteins / f"{nameFile}.faa"
         gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
+
+    counter_gbk.increment()
+    pbar_gbk.update(counter_gbk.value())
 
     return 
 
@@ -631,6 +638,7 @@ ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 num_rows = ictv_df.shape[0]
 
 # RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+pbar_gbk =tqdm(desc="Completely done", colour="GREEN", position=0, total=num_rows) 
 pbar_gff =tqdm(desc="Gff processed", colour="CYAN", position=1, total=num_rows) 
 pbar_fna =tqdm(desc="Lst processed", colour="BLUE", position=2, total=num_rows) 
 pbar_lst =tqdm(desc="Fna processed", colour="MAGENTA", position=3, total=num_rows) 
@@ -649,7 +657,7 @@ args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("rec
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(tqdm(pool.imap(efetch_accession2gbk, args_func), total=num_rows, colour="GREEN", desc="Completely done", position=0))
+results = list(pool.imap(efetch_accession2gbk, args_func))
 pool.close()
 queueListerner.stop()
 
