@@ -198,7 +198,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
         # create a file to quickly have the informations 
         logging.debug(f"-> Creating: {nameFile}.lst")
 
-        lst_df = gbk2lst(gbk=gbk, lst_file=lst_file)
+        lst_df = gbk2lst(replicon=gbk, lst_file=lst_file)
 
     counter_lst.increment()
 
