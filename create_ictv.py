@@ -192,35 +192,35 @@ def efetch_accession2gbk(accGenBank_nameFile):
     # Lst file
     lst_file = Lst / f"{nameFile}.lst"
 
-    if lst_file.is_file():
-        logging.debug(f"-> Reading: {nameFile}.lst")
-
-        columns_lst = ['start', 'end', 'strand', 'type', 'gene', 'status', 'synonyms',
-       'locus_tag', 'nexons', 'positions', 'sequence_nt', 'sequence_aa',
-       'product_note']
-
-        dtype_lst = {
-            'start':int,
-            'end':int, 
-            'strand':str, 
-            'type':str, 
-            'gene':str, 
-            'status':str, 
-            'synonyms':str,
-            'locus_tag':str, 
-            'nexons':int, 
-            'positions':str, 
-            'sequence_nt':str, 
-            'sequence_aa':str,
-            'product_note':str
-            }
-
-        lst_df = pd.read_table(lst_file)
-    else:
+    if not lst_file.is_file():
         # create a file to quickly have the informations 
         logging.debug(f"-> Creating: {nameFile}.lst")
 
         lst_df = gbk2lst(replicon=gbk, lst_file=lst_file)
+
+    logging.debug(f"-> Reading: {nameFile}.lst")
+
+    columns_lst = ['start', 'end', 'strand', 'type', 'gene', 'status', 'synonyms',
+    'locus_tag', 'nexons', 'positions', 'sequence_nt', 'sequence_aa',
+    'product_note']
+
+    dtype_lst = {
+        'start':int,
+        'end':int, 
+        'strand':str, 
+        'type':str, 
+        'gene':str, 
+        'status':str, 
+        'synonyms':str,
+        'locus_tag':str, 
+        'nexons':int, 
+        'positions':str, 
+        'sequence_nt':str, 
+        'sequence_aa':str,
+        'product_note':str
+        }
+
+    lst_df = pd.read_table(lst_file, names=columns_lst, dtype=dtype_lst)
 
     counter_lst.increment()
 
@@ -398,10 +398,6 @@ def gbk2lst(replicon, lst_file) :
         if tmp_dict['type'][-1] == "CDS":
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
             tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).seq))
-
-        logging.debug(f"{type(sequence.extract(replicon).seq)}")
-        logging.debug(f"{str(sequence.extract(replicon).seq)}")
-        logging.debug(f"{type(str(sequence.extract(replicon).seq))}")
 
     df = pd.DataFrame(tmp_dict)
 
