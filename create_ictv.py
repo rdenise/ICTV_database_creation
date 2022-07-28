@@ -12,7 +12,6 @@
 import argparse
 from textwrap import dedent
 import sys, os
-from numpy import dtype
 import pandas as pd
 import logging
 from logging.handlers import QueueHandler, QueueListener
@@ -21,7 +20,9 @@ import multiprocessing
 from pathlib import Path
 import datetime
 import Bio
-from Bio import Entrez, SeqIO, SeqRecord
+from Bio import Entrez, SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from BCBio import GFF
 
 ##########################################################################################
@@ -437,7 +438,7 @@ def gbk2gen(df_lst, gen_file) :
 
         product_note = sequence['product_note']
 
-        gene_seq = SeqRecord.SeqRecord(sequence['sequence_nt'])
+        gene_seq = SeqRecord(Seq(sequence['sequence_nt']))
 
         size_gene = len(gene_seq)
 
@@ -460,8 +461,6 @@ def gbk2gen(df_lst, gen_file) :
     df_lst_Valid_CDS['description_gembase'] = all_descriptions
     df_lst_Valid_CDS['start_codon'] = all_starts
     df_lst_Valid_CDS['stop_codon'] = all_stops
-
-    logging.debug(list_sequences)
 
     SeqIO.write(list_sequences, gen_file, 'fasta')
 
@@ -502,14 +501,12 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
 
     for sequence in dict_lst_Valid_CDS:
 
-        protein = SeqRecord.SeqRecord(sequence['sequence_aa'])
+        protein = SeqRecord(Seq(sequence['sequence_aa']))
 
         protein.id = sequence['synonyms']
 
         # There is two spaces before the parenthesis in the .prt format so I keep it
         protein.description = f"{sequence['description_gembase']} (translation)"
-
-        logging.debug(f"{str(protein)}")
 
         all_proteins.append(protein)
 
