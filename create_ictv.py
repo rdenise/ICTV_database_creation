@@ -19,6 +19,7 @@ from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
 import datetime
+import Bio
 from Bio import Entrez, SeqIO
 from BCBio import GFF
 
