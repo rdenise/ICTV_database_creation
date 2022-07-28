@@ -32,30 +32,28 @@ from BCBio import GFF
 
 
 class Counter(object):
-    def __init__(self, initval=0):
+    def __init__(self, desc, colour, total ,initval=0):
         self.val = multiprocessing.RawValue('i', initval)
         self.lock = multiprocessing.Lock()
+        self.pbar = tqdm(desc=desc, colour=colour, total=total)
 
     def increment(self):
         with self.lock:
             self.val.value += 1
+            self.pbar.update(self.val.value)
 
     @property
     def value(self):
         return self.val.value
+    
+    def close(self):
+        self.pbar.close()
 
 ##########################################################################################
 
 currentDate = datetime.date.today()
 Entrez.email = "rdenise@ucc.ie"
 Entrez.tool = "create_ictv.py"
-
-counter_gbk = Counter()
-counter_faa = Counter()
-counter_fna = Counter()
-counter_gene_fna = Counter()
-counter_gff = Counter()
-counter_lst = Counter()
 
 ##########################################################################################
 ##########################################################################################
@@ -141,7 +139,6 @@ def efetch_accession2gbk(accGenBank_nameFile):
     """
 
     global counter_gbk
-    global pbar_gbk
 
     accGenBank = accGenBank_nameFile['Virus GENBANK accession']
     nameFile = accGenBank_nameFile['File_identifier']
@@ -204,7 +201,6 @@ def efetch_accession2gbk(accGenBank_nameFile):
         gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
     counter_gbk.increment()
-    pbar_gbk.update(counter_gbk.value())
 
     return 
 
@@ -639,12 +635,12 @@ ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 num_rows = ictv_df.shape[0]
 
 # RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
-pbar_gbk =tqdm(desc="Completely done", colour="GREEN", position=1, total=num_rows) 
-pbar_gff =tqdm(desc="Gff processed", colour="CYAN", position=2, total=num_rows) 
-pbar_fna =tqdm(desc="Lst processed", colour="BLUE", position=3, total=num_rows) 
-pbar_lst =tqdm(desc="Fna processed", colour="MAGENTA", position=4, total=num_rows) 
-pbar_gene_fna =tqdm(desc="Gen processed", colour="RED", position=5, total=num_rows) 
-pbar_faa =tqdm(desc="Prt processed", colour="YELLOW", position=6, total=num_rows) 
+counter_gbk = Counter(desc="Completely done", colour="GREEN", total=num_rows)
+counter_gff = Counter(desc="Gff processed", colour="CYAN", total=num_rows)
+counter_fna = Counter(desc="Lst processed", colour="BLUE", total=num_rows)
+counter_lst = Counter(desc="Fna processed", colour="MAGENTA", total=num_rows)
+counter_gene_fna = Counter(desc="Gen processed", colour="RED", total=num_rows)
+counter_faa = Counter(desc="Prt processed", colour="YELLOW", total=num_rows)
 
 ##########################################################################################
 
@@ -661,6 +657,13 @@ pool = multiprocessing.Pool(
 results = list(pool.imap(efetch_accession2gbk, args_func))
 pool.close()
 queueListerner.stop()
+
+counter_gbk.close()
+counter_gff.close()
+counter_fna.close()
+counter_lst.close()
+counter_gene_fna.close()
+counter_faa.close()
 
 logging.info("Done!")
 print("\nDone!\n")
