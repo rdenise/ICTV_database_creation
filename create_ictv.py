@@ -400,12 +400,15 @@ def gbk2lst(replicon, lst_file) :
             note = ' '.join(sequence.qualifiers['note'])  
         else :
             note = ""
-            
+
         tmp_dict['product_note'].append(f'| {product} | {note}')
 
         if tmp_dict['type'][-1] == "CDS":
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
             tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).seq))
+
+    logging.debug(f"{[len(i) for key, i in tmp_dict]}")
+    logging.debug(f"{[key for key, i in tmp_dict]}")
 
     df = pd.DataFrame(tmp_dict)
 
