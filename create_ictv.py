@@ -338,44 +338,45 @@ def gbk2lst(replicon, lst_file) :
         
         list_position = [str(position) for position in list_position]
 
-        tmp_dict['position'] = ' '.join(list_position)
+        tmp_dict['position'].append(' '.join(list_position))
 
-        tmp_dict['start'] = int(list_position[0])
-        tmp_dict['end'] = int(list_position[-1])
+        tmp_dict['start'].append(int(list_position[0]))
+        tmp_dict['end'].append(int(list_position[-1]))
 
         # The only states that I found in the .lst of MICROBIAL_D Partial, Pseudo, Invalid_Size, Valid : 
-        if tmp_dict['status'] == '' :
+        if tmp_dict['status'][-1] == '' :
             if 'pseudo' in sequence.qualifiers :
-                tmp_dict['status'] = 'Pseudo'
+                tmp_dict['status'][-1] = 'Pseudo'
             elif 'frameshift' in ' '.join(sequence.qualifiers['note']).lower() : 
-                tmp_dict['status'] = 'Invalid_Size'
+                tmp_dict['status'][-1] = 'Invalid_Size'
             else :
-                tmp_dict['status'] = 'Valid'
+                tmp_dict['status'][-1] = 'Valid'
 
         # D if in direct strand (=> strand = 1), C in complementary strand (=> strand = -1)
-        tmp_dict['strand'] = '+' if sequence.strand == 1 else '-' 
-        tmp_dict['type'] = sequence.type
-        tmp_dict['nexons'] = len(sequence.location.parts)
+        tmp_dict['strand'].append('+' if sequence.strand == 1 else '-') 
+        tmp_dict['type'].append(sequence.type)
+        tmp_dict['nexons'].append(len(sequence.location.parts))
 
         # Because in the gembase file the gene name and the locus_tag are the same so the information is twice in the file
         # But I have no clue why. Maybe because the file from assembly have a GenBank file without the gene part
         if 'gene' in sequence.qualifiers :
-            tmp_dict['gene'] = ' '.join(sequence.qualifiers['gene'])
-            tmp_dict['locus_tag'] = ' '.join(sequence.qualifiers['locus_tag'])
+            tmp_dict['gene'].append(' '.join(sequence.qualifiers['gene']))
+            tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
         else :
-            tmp_dict['gene'] = tmp_dict['locus_tag'] = ' '.join(sequence.qualifiers['locus_tag'])
+            tmp_dict['gene'].append(' '.join(sequence.qualifiers['locus_tag']))
+            tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
 
         if 'protein_id' in sequence.qualifiers :
-            tmp_dict['synonyms'] = ' '.join(sequence.qualifiers['protein_id'])
+            tmp_dict['synonyms'].append(' '.join(sequence.qualifiers['protein_id']))
         else :
-            tmp_dict['synonyms'] = ''
+            tmp_dict['synonyms'].append('')
 
         product = ' '.join(sequence.qualifiers['product'])
         note = ' '.join(sequence.qualifiers['note'])
-        tmp_dict['product_note'] = f'|{product}|{note}'
+        tmp_dict['product_note'].append(f'|{product}|{note}')
 
-        tmp_dict['sequence_aa'] = sequence.qualifiers['translation']
-        tmp_dict['sequence_nt'] = sequence.extract(replicon)
+        tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'])
+        tmp_dict['sequence_nt'].append(sequence.extract(replicon))
 
 
     df = pd.DataFrame(tmp_dict)
