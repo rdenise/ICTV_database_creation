@@ -397,7 +397,7 @@ def gbk2lst(replicon, lst_file) :
 
         if tmp_dict['type'][-1] == "CDS":
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
-            tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).seq))
+            tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).tostring()))
 
     df = pd.DataFrame(tmp_dict)
 
@@ -461,8 +461,6 @@ def gbk2gen(df_lst, gen_file) :
         all_starts.append(start_codon)
         all_stops.append(stop_codon)
 
-        logging.debug(f"{gene_seq}")
-
     df_lst_Valid_CDS['description_gembase'] = all_descriptions
     df_lst_Valid_CDS['start_codon'] = all_starts
     df_lst_Valid_CDS['stop_codon'] = all_stops
@@ -513,7 +511,7 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
         # There is two spaces before the parenthesis in the .prt format so I keep it
         protein.description = f"{sequence['description_gembase']} (translation)"
 
-        logging.debug(f"{protein}")
+        logging.debug(f"{str(protein)}")
 
         all_proteins.append(protein)
 
