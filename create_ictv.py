@@ -391,8 +391,16 @@ def gbk2lst(replicon, lst_file) :
         else :
             tmp_dict['synonyms'].append('')
 
-        product = ' '.join(sequence.qualifiers['product']) if 'product' in sequence.qualifiers else ""
-        note = ' '.join(sequence.qualifiers['note']) if 'note' in sequence.qualifiers else ""
+        if 'product' in sequence.qualifiers :
+            product = ' '.join(sequence.qualifiers['product'])
+        else :
+            product = ""
+        
+        if 'note' in sequence.qualifiers:
+            note = ' '.join(sequence.qualifiers['note'])  
+        else :
+            note = ""
+            
         tmp_dict['product_note'].append(f'| {product} | {note}')
 
         if tmp_dict['type'][-1] == "CDS":
