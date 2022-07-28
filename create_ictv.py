@@ -205,19 +205,19 @@ def efetch_accession2gbk(accGenBank_nameFile):
     'product_note']
 
     dtype_lst = {
-        'start':int,
-        'end':int, 
-        'strand':str, 
-        'type':str, 
-        'gene':str, 
-        'status':str, 
-        'synonyms':str,
-        'locus_tag':str, 
-        'nexons':int, 
-        'positions':str, 
-        'sequence_nt':str, 
-        'sequence_aa':str,
-        'product_note':str
+        'start':'int32',
+        'end':'int32', 
+        'strand':"string", 
+        'type':"string", 
+        'gene':"string", 
+        'status':"string", 
+        'synonyms':"string",
+        'locus_tag':"string", 
+        'nexons':'int32', 
+        'positions':"string", 
+        'sequence_nt':"string", 
+        'sequence_aa':"string",
+        'product_note':"string"
         }
 
     lst_df = pd.read_table(lst_file, names=columns_lst, dtype=dtype_lst)
