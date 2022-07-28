@@ -628,7 +628,7 @@ tqdm.pandas(desc="Creating names", colour="GREEN")
 
 # Changing the name to have a good one Species.Notes.GenBankAcc
 ictv_df["File_identifier"] = ictv_df.progress_apply(
-    lambda x: f"{x.Species.replace(" ", "_")}.{x.Sort}.{x['Virus GENBANK accession']}",
+    lambda x: f"{x.Species.replace(' ', '_')}.{x.Sort}.{x['Virus GENBANK accession']}",
     axis = 1
 )
 
