@@ -374,7 +374,7 @@ def gbk2lst(replicon, lst_file) :
         note = ' '.join(sequence.qualifiers['note'])
         tmp_dict['product_note'].append(f'|{product}|{note}')
 
-        if tmp_dict['type'] == "CDS":
+        if tmp_dict['type'][-1] == "CDS":
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
             tmp_dict['sequence_nt'].append(sequence.extract(replicon).seq)
 
