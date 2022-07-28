@@ -10,26 +10,52 @@
 ##########################################################################################
 
 import argparse
-from stat import filemode
-from unicodedata import name
+from glob import glob
 from textwrap import dedent
 import sys, os
 import pandas as pd
-import requests
-from io import StringIO, BytesIO
-import hashlib
-import gzip
 import logging
 from logging.handlers import QueueHandler, QueueListener
 from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
 import datetime
+from Bio import Entrez, SeqIO
+from BCBio import GFF
+
+##########################################################################################
+##########################################################################################
+##
+##                                Classes
+##
+##########################################################################################
+##########################################################################################
+
+
+class Counter(object):
+    def __init__(self, initval=0):
+        self.val = multiprocessing.RawValue('i', initval)
+        self.lock = multiprocessing.Lock()
+
+    def increment(self):
+        with self.lock:
+            self.val.value += 1
+
+    @property
+    def value(self):
+        return self.val.value
 
 ##########################################################################################
 
-session = None
 currentDate = datetime.date.today()
+Entrez.email = "rdenise@ucc.ie"
+Entrez.tool = "create_ictv.py"
+
+counter_faa = Counter()
+counter_fna = Counter()
+counter_gene_fna = Counter()
+counter_gff = Counter()
+counter_lst = Counter()
 
 ##########################################################################################
 ##########################################################################################
@@ -73,9 +99,7 @@ def logger_init(level):
 
 
 def init_process(mpQueue, level):
-    global session
-    session = requests.Session()
-
+    
     # all records from worker processes go to queueHandler and then into mpQueue
     queueHandler = QueueHandler(mpQueue)
     logger = logging.getLogger()
@@ -106,7 +130,7 @@ def create_folder(mypath):
 ##########################################################################################
 
 
-def get_assembly_file(url):
+def efetch_accession2gbk(accGenBank_nameFile):
     """
     Function that will get the assembly file from the ncbi server
 
@@ -116,290 +140,45 @@ def get_assembly_file(url):
     :rtype: pandas.dataframe
     """
 
-    response = requests.get(url)
+    accGenBank, nameFile = accGenBank_nameFile
 
-    assembly_summary = pd.read_table(StringIO(response.text), skiprows=1)
+    logging.debug(f"-> Downloading the identifier {accGenBank}")
 
-    logging.debug("Finish to read the assembly file : {assembly}".format(assembly=url))
+    handle = Entrez.efetch(db="nucleotide", rettype="gbwithparts", retmode="text",
+                          id=accGenBank)
 
-    assembly_summary.rename(
-        columns={"# assembly_accession": "assembly_accession"}, inplace=True
-    )
+    gbk = SeqIO.read(handle, 'genbank')
 
-    return assembly_summary
+    logging.debug(f"-> Creating: {nameFile}.gbk")
 
+    gbk_file = GenBank / f"{nameFile}.gbk"
 
-##########################################################################################
+    SeqIO.write(gbk, gbk_file, format='genbank')
 
+    logging.debug(f"-> Creating: {nameFile}.gff")
 
-def write_file(gbff_response, local_filename):
+    gff_file = Gff / f"{nameFile}.gff"
+    gbk2gff3(gbk_file=gbk_file, outfile=gff_file)
 
-    """
-    Function that will read the (multi) genbank file and extract the infornations
-    about each replicon.
+    logging.debug(f"-> Creating: {nameFile}.fna")
 
-    :params species: row of the assembly dataframe
-    :type: pandas.Series
-    :params Genomes: Path to the Genomes folder
-    :type: str
-    :params gbff_response: The gz file from the ftp of assembly database
-    :type: requests.models.Response
-    """
+    fasta_file = Genomes / f"{nameFile}.fna"
+    gbk2fasta(replicon=gbk, fasta_file=fasta_file)
 
-    with open(local_filename, "wt") as w_file:
-        w_file.write(gbff_response.text)
+    # create a file to quickly have the informations 
+    lst_df = gbk2lst(gbk)
 
-    return
+    logging.debug(f"-> Creating: {nameFile}.gene.fna")
 
+    gen_file = Genes / f"{nameFile}.genes.fna"
+    valid_df = gbk2gen(df_lst=lst_df, gen_file=gen_file)
+    
+    logging.debug(f"-> Creating: {nameFile}.faa")
 
-##########################################################################################
+    prt_file = Proteins / f"{nameFile}.faa"
+    gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
-
-def write_file_uncompress(gbff_response, local_filename):
-
-    """
-    Function that will read the (multi) genbank file and extract the infornations
-    about each replicon.
-
-    :params species: row of the assembly dataframe
-    :type: pandas.Series
-    :params Genomes: Path to the Genomes folder
-    :type: str
-    :params gbff_response: The gz file from the ftp of assembly database
-    :type: requests.models.Response
-    """
-
-    with gzip.open(BytesIO(gbff_response.content), mode="rt") as r_file:
-        with open(local_filename, "wt") as w_file:
-            for line in r_file:
-                w_file.write(line)
-
-    return
-
-
-##########################################################################################
-
-
-def fetch_genbank_file(species):
-
-    """
-    Function that will fetch the concatenated and gzipped genbank file and create the id
-    for the strain number curr_No_taxidsp (the id of the species)
-
-    :params species: row of the assembly dataframe
-    :type: pandas.Series
-    :params Genomes: Path to the Genomes folder
-    :type: str
-    """
-
-    global session
-
-    # check integrity of the file after download (note: if file was dezipped and rezipped it will not be recognized anymore)
-    ftp_md5_path = f"{species['ftp_path'].replace('ftp:', 'https:')}/md5checksums.txt"
-
-    try:
-        md5_gbk = pd.read_csv(
-            StringIO(session.get(ftp_md5_path).text),
-            names=["md5", "assembly_files"],
-            sep="\s+",
-        )
-    except:
-        # Because some url seems to not be updated in the assembly file
-        old_ftp = ftp_md5_path
-        new_ftp = old_ftp.replace(old_ftp.split("_")[-1], species["asm_name"]) + "/md5checksums.txt"
-        new_ftp = new_ftp.replace(" ", "_")
-
-        logging.debug(f"Exception:: Change last url to correct {old_ftp} -> {new_ftp}")
-
-        md5_gbk = pd.read_csv(
-            StringIO(session.get(new_ftp).text),
-            names=["md5", "assembly_files"],
-            sep="\s+",
-        )
-
-    ftp_location = {
-        "ftp_gbff": GenBank,
-        "ftp_fna": Genomes,
-        "ftp_faa": Proteins,
-        "ftp_gff": Gff,
-        "ftp_gene": Genes,
-        "ftp_report": Assembly_report,
-    }
-
-    for ftp_file, local_folder in ftp_location.items():
-
-        file_name = local_folder / species[ftp_file].replace(".gz", "")
-
-        if not file_name.is_file():
-            gbff_url = "{}/{}".format(species["ftp_path"], species[ftp_file]).replace(
-                "ftp:", "https:"
-            )
-
-            logging.debug(f"-> Using or downloading/using {gbff_url}")
-
-            gbff_response = session.get(gbff_url)
-            md5_gbff = hashlib.md5(gbff_response.content)
-
-            sub_md5_gbff = md5_gbk[
-                md5_gbk.assembly_files.str.contains(species[ftp_file])
-            ]
-
-            if (
-                not sub_md5_gbff.empty
-                and sub_md5_gbff.md5.values[0] == md5_gbff.hexdigest()
-            ):
-
-                # print("\n-> md5 CHECKED OK")
-                logging.debug(f"MD5 OK and checked for -> {gbff_url}")
-
-                if species[ftp_file].endswith(".gz"):
-                    write_file_uncompress(gbff_response, file_name)
-                else:
-                    write_file(gbff_response, file_name)
-
-            else:
-                logging.debug(f"Did not check, erasing the file -> {gbff_url}")
-        else:
-            logging.debug(f"This file already exists -> {file_name}")
-
-    return
-
-
-##########################################################################################
-
-
-def get_info_report(report_files):
-
-    header_report = [
-        "Sequence-Name",
-        "Sequence-Role",
-        "Assigned-Molecule",
-        "Assigned-Molecule-Location/Type",
-        "GenBank-Accn",
-        "Relationship",
-        "RefSeq-Accn",
-        "Assembly-Unit",
-        "Sequence-Length",
-        "UCSC-style-name",
-    ]
-
-    dict_genbank = {}
-    dict_ncid = {}
-
-    num_file = len(list(report_files))
-
-    for report in tqdm(report_files, colour="GREEN", total=num_file):
-        name_GCA = "_".join(report.stem.split("_")[:2])
-        ids = pd.read_table(report, comment="#", names=header_report)[
-            ["GenBank-Accn", "RefSeq-Accn"]
-        ]
-        for index, genbank, ncid in ids.itertuples():
-            dict_genbank[name_GCA] = genbank.split(".")[0]
-            dict_ncid[name_GCA] = ncid
-
-    return dict_genbank, dict_ncid
-
-
-##########################################################################################
-
-
-def create_metadata(
-    ictv_xlsx, assembly_table, dict_ncid, dict_genbank, output_metadata
-):
-
-    ictv_df = pd.read_excel(ictv_xlsx)
-
-    # Change the list of GENBANK accession to list
-    ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-        lambda x: x.split("; ") if x == x else ""
-    )
-    # Create one line per GENBANK accession ids
-    ictv_df = ictv_df.explode("Virus GENBANK accession")
-    # Take only the important part of the name
-    ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-        lambda x: x.split(": ")[-1] if x == x else ""
-    )
-
-    # Get the assembly table and add the new columns
-    assembly_table["NC_Id"] = assembly_table.assembly_accession.map(dict_ncid)
-    assembly_table["Virus GENBANK accession"] = assembly_table.assembly_accession.map(
-        dict_genbank
-    )
-
-    name2keep_from_assembly = [
-        "assembly_accession",
-        "NC_Id",
-        "Virus GENBANK accession",
-        "bioproject",
-        "taxid",
-        "species_taxid",
-        "asm_name",
-        "gbrs_paired_asm",
-    ]
-
-    print(ictv_df)
-    print("-------")
-    print(assembly_table[name2keep_from_assembly])
-
-    ictv_df = ictv_df.merge(
-        assembly_table[name2keep_from_assembly],
-        on="Virus GENBANK accession",
-        how="left",
-    )
-
-    ictv_df.to_csv(output_metadata, index=False, sep="\t")
-
-    return ictv_df
-
-
-##########################################################################################
-
-
-def rename_file(ictv_df, all_folders):
-
-    ictv_df["new_name"] = ictv_df.apply(
-        lambda x: f"{x['Species']}_{x['Virus GENBANK accession']}_{x['assembly_accession']}",
-        axis=1,
-    )
-    GCA2name = ictv_df.set_index("assembly_accession").new_name.to_dict()
-
-    for folder in all_folders:
-        for myfile in folder.glob("*"):
-            myfile_GCA = "_".join(myfile.stem.split("_")[:2])
-            myfile_ext = myfile.suffix
-
-            myfile_GCA = GCA2name(myfile_GCA)
-
-            logging.info(f"Renaming {myfile.name} to {myfile_GCA + myfile_ext}")
-
-            myfile.rename(Path(myfile.parent, myfile_GCA + myfile_ext))
-
-    return
-
-
-##########################################################################################
-
-
-def rename_gene_files(gene_files):
-
-    for gene_file in gene_files:
-        parser = SeqIO.parse(gene_file, "fasta")
-
-        tmp_file = str(gene_file) + ".tmp"
-        gene_file_name = str(gene_file)
-
-        with open(tmp_file, "wt") as w_file:
-            for gene in parser:
-                gene.id = " gene_index:".join(gene.id.split("_")[-2:])
-                gene.name = ""
-
-                SeqIO.write(gene, w_file, "fasta")
-
-        tmp_file = Path(gene_file.parent, tmp_file)
-        gene_file.unlink()
-        tmp_file.rename(gene_file_name)
-
-    return
+    return 
 
 
 ##########################################################################################
@@ -422,6 +201,274 @@ def concat_files():
 
     return
 
+##########################################################################################
+
+def gbk2fasta(replicon, fasta_file) :
+
+    '''
+    Function that will create the .fst file for a specific replicon
+    Converting the genbank to fasta for the full sequence of the chromosome/plasmid
+
+    :params replicon: The actual replicon with all the informations of the genbank 
+    :type: Bio.SeqRecord.SeqRecord
+    :params replicon_id: The gembase id of the replicon
+    :type: str
+    :params fasta_file: Path of the new created file
+    :type: str    
+    '''
+
+    global counter_fna
+    global pbar_fna
+
+    date = replicon.annotations['date'] 
+
+    len_bp = '{bp_size}bp'.format(bp_size=len(replicon))
+
+    replicon.id = replicon.name
+
+    replicon.name = ''
+
+    replicon.description = f'{len_bp} {replicon.description} [{date}]'
+
+    SeqIO.write(replicon, fasta_file, 'fasta')
+
+    counter_fna.increment()
+    pbar_fna.update(counter_fna.value())
+
+    return
+    
+##########################################################################################
+
+def gbk2lst(replicon) :
+
+    '''
+    Function that will create the .lst file for a specific replicon
+
+    :params replicon: The actual replicon with all the informations of the genbank 
+    :type: Bio.SeqRecord.SeqRecord
+    :params replicon_id: The gembase id of the replicon
+    :type: str
+    :params lst_file: Path of the new created file
+    :type: str
+    :return: The dataframe that was write in .lst file
+    :rtype: pandas.DataFrame
+    '''
+
+    global counter_lst
+    global pbar_lst
+
+    tmp_dict = {
+        'start':[],
+        'end':[],
+        'strand':[],
+        'type':[],
+        'gembase_Id':[],
+        'gene':[],
+        'status':[],
+        'synonyms':[],
+        'locus_tag':[],
+        'nexons':[],
+        'position':[],
+        'sequence_nt':[],
+        'sequence_aa':[],
+        'product_note':[]
+        } 
+
+    # Allow to only have the interesting features of the gbk without redondancy
+    new_list = [x for x in replicon.features if x.type not in ('source', 'gene')]    
+
+    for sequence in new_list : 
+
+        tmp_dict['status'].append('')
+
+        # As the gene could be at multiple position because of programmed frameshift or at the extremity of the chromosome
+        list_position = []
+
+        for position in sequence.location.parts :
+            if Bio.SeqFeature.BeforePosition == type(position.start) or Bio.SeqFeature.AfterPosition == type(position.end) :
+                tmp_dict['status'][-1] = 'Partial'
+            
+            # Add position to the list of position and start +1 because python begin at 0
+            list_position.extend([position.nofuzzy_start + 1, position.nofuzzy_end])
+            
+        # I do not know why but even if biopython know where is the start and stop, he order weirdly when it is in the complementary strand
+        list_position = sorted(list_position)
+
+        # Because bug of biopython, when gene on the virtual cut of the chromosome it does not know how to identify the start and the stop
+        if sequence.location_operator == 'join' and sequence.location.start == 0 :
+            # put the first 2 element at the end
+            for j in range(2) :
+                list_position.append(list_position.pop(0))
+        
+        list_position = [str(position) for position in list_position]
+
+        tmp_dict['position'] = ' '.join(list_position)
+
+        tmp_dict['start'] = int(list_position[0])
+        tmp_dict['end'] = int(list_position[-1])
+
+        # The only states that I found in the .lst of MICROBIAL_D Partial, Pseudo, Invalid_Size, Valid : 
+        if tmp_dict['status'] == '' :
+            if 'pseudo' in sequence.qualifiers :
+                tmp_dict['status'] = 'Pseudo'
+            elif 'frameshift' in ' '.join(sequence.qualifiers['note']).lower() : 
+                tmp_dict['status'] = 'Invalid_Size'
+            else :
+                tmp_dict['status'] = 'Valid'
+
+        # D if in direct strand (=> strand = 1), C in complementary strand (=> strand = -1)
+        tmp_dict['strand'] = '+' if sequence.strand == 1 else '-' 
+        tmp_dict['type'] = sequence.type
+        tmp_dict['nexons'] = len(sequence.location.parts)
+
+        # Because in the gembase file the gene name and the locus_tag are the same so the information is twice in the file
+        # But I have no clue why. Maybe because the file from assembly have a GenBank file without the gene part
+        if 'gene' in sequence.qualifiers :
+            tmp_dict['gene'] = ' '.join(sequence.qualifiers['gene'])
+            tmp_dict['locus_tag'] = ' '.join(sequence.qualifiers['locus_tag'])
+        else :
+            tmp_dict['gene'] = tmp_dict['locus_tag'] = ' '.join(sequence.qualifiers['locus_tag'])
+
+        if 'protein_id' in sequence.qualifiers :
+            tmp_dict['synonyms'] = ' '.join(sequence.qualifiers['protein_id'])
+        else :
+            tmp_dict['synonyms'] = ''
+
+        product = ' '.join(sequence.qualifiers['product'])
+        note = ' '.join(sequence.qualifiers['note'])
+        tmp_dict['product_note'] = f'|{product}|{note}'
+
+        tmp_dict['sequence_aa'] = sequence.qualifiers['translation']
+        tmp_dict['sequence_nt'] = sequence.extract(replicon)
+
+
+    df = pd.DataFrame(tmp_dict)
+
+    counter_lst.increment()
+    pbar_lst.update(counter_lst.value())
+
+    return df
+
+
+##########################################################################################
+
+def gbk2gen(df_lst, gen_file) :
+
+    '''
+    Function that will create the .gen file for a specific replicon
+    Converting the genbank to multifasta for each genes in the replicon
+
+    :params replicon: The actual replicon with all the informations of the genbank 
+    :type: Bio.SeqRecord.SeqRecord
+    :params df_lst: The dataframe that was write in .lst file
+    :type: pandas.DataFrame  
+    :params gen_file: Path of the new created file
+    :type: str   
+    :return: The sub dataframe of the genes CDS and Valid to have the same description without
+             calculating it again
+    :rtype: pandas.DataFrame
+    '''
+
+    global counter_gene_fna
+    global pbar_gene_fna
+
+    df_lst_Valid_CDS = df_lst[(df_lst.type == 'CDS') & (df_lst.status == 'Valid')].reset_index(drop=True)
+    dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict['records']
+    # List of all the sequences to write
+    sequences = []
+    
+    for index, sequence in dict_lst_Valid_CDS.items():
+
+        start_codon = str(sequence['sequence_nt'][:3])
+        stop_codon = str(sequence['sequence_nt'][-3:])      
+
+        product_note = sequence['product_note']
+
+        gene_seq = sequence['sequence_nt']
+
+        size_gene = len(gene_seq)
+
+        gene_seq.id = sequence['synonyms']
+        gene_seq.name = ''
+
+        list_description = [sequence.strand, start_codon, stop_codon, str(sequence.start), str(sequence.end),
+                       sequence.gene, size_gene, sequence.synonyms, sequence.locus_tag,
+                       sequence.nexons, sequence.positions, product_note]
+
+        gene_seq.description = ' '.join(list_description)
+
+        # We add the gene modify in description to the list
+        sequences.append(gene_seq)
+
+        df_lst_Valid_CDS['description_gembase'] = ' '.join(list_description)
+        df_lst_Valid_CDS['start_codon'] = start_codon
+        df_lst_Valid_CDS['stop_codon'] = stop_codon
+
+    SeqIO.write(sequences, gen_file, 'fasta')
+
+    counter_gene_fna.increment()
+    pbar_gene_fna.update(counter_gene_fna.value())
+
+    return df_lst_Valid_CDS
+
+##########################################################################################
+
+def gbk2gff3(gbk_file, outfile):
+
+    global counter_gff
+    global pbar_gff
+
+    with open(outfile, "wt") as w_file:
+        GFF.write(SeqIO.parse(gbk_file, "genbank"), w_file)
+
+    counter_gff.increment()
+    pbar_gff.update(counter_gff.value())
+
+    return
+
+##########################################################################################
+
+def gbk2prt(prt_file, df_lst_Valid_CDS) :
+
+    '''
+    Function that will create the .prt file for a specific replicon
+    Converting the genbank to multi fasta for each proteins in the replicon
+
+    :params replicon: The actual replicon with all the informations of the genbank 
+    :type: Bio.SeqRecord.SeqRecord
+    :params prt_file: Path of the new created file
+    :type: str      
+    :params df_lst_Valid_CDS: The sub dataframe of the genes CDS and Valid to have the same description 
+             of .gen file without calculating it again
+    :type: pandas.DataFrame   
+    '''
+
+    global counter_faa
+    global pbar_faa
+
+    # Transform the features of the gbk into a dict with the name of the locus_tag as key and feature as value
+    # Allow to keep the order of the .lst file but using the translation of the .gbk without calculate it
+    dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict['records']
+
+    # List of all the proteins to write
+    proteins = []
+
+    for index, sequence in dict_lst_Valid_CDS.items():
+        seq = Seq(sequence['sequence_aa'])
+
+        seq.id = sequence['synonyms']
+
+        # There is two spaces before the parenthesis in the .prt format so I keep it
+        seq.description = '{} (translation)'.format(sequence['description_gembase'])
+
+        proteins.append(seq)
+
+    SeqIO.write(proteins, prt_file, 'fasta')
+
+    counter_faa.increment()
+    pbar_faa.update(counter_faa.value())
+
+    return
 
 ##########################################################################################
 ##########################################################################################
@@ -479,7 +526,7 @@ general_option.add_argument(
     "--ictv_metadata",
     metavar="<ictv_metadata_table>",
     dest="ictv_metadata",
-    help="Path to the ICTV taxonomy table that contain the Genbank Id",
+    help="Path to the ICTV taxonomy xlsx table that contain the Genbank Id, can be found: https://talk.ictvonline.org/taxonomy/vmr/m/vmr-file-repository/",
     required=True,
     default="",
     type=str,
@@ -495,7 +542,6 @@ GenBank = taxa / "GenBank"
 Genes = taxa / "Genes"
 Proteins = taxa / "Proteins"
 Gff = taxa / "Gff"
-Assembly_report = taxa / "Assembly_Reports"
 
 create_folder(taxa)
 create_folder(Genomes)
@@ -503,7 +549,6 @@ create_folder(GenBank)
 create_folder(Genes)
 create_folder(Proteins)
 create_folder(Gff)
-create_folder(Assembly_report)
 
 ##########################################################################################
 
@@ -521,101 +566,67 @@ logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stam
 
 ##########################################################################################
 
-list_viral = "viral_assembly_summary.txt"
-viral_table_assembly = (
-    "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/assembly_summary_genbank.txt"
+# File for the metadata of ICTV could be found here: https://talk.ictvonline.org/taxonomy/vmr/m/vmr-file-repository/
+
+logging.info("\n-> Reading all the information on ICTV and exploding the identifiers\n")
+print("-> Reading all the information on ICTV and exploding the identifiers")
+
+
+ictv_df = pd.read_excel(args.ictv_metadata)
+ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
+
+tqdm.pandas(desc="Step1", colour="GREEN")
+
+# Change the list of GENBANK accession to list
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].progress_apply(
+    lambda x: x.split("; ") if x == x else ""
 )
-assembly_summary_viral_file = taxa / list_viral
+# Create one line per GENBANK accession ids
+ictv_df = ictv_df.explode("Virus GENBANK accession")
+
+tqdm.pandas(desc="Step2", colour="GREEN")
+
+# Take only the important part of the name
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].progress_apply(
+    lambda x: x.split(": ")[-1] if x == x else ""
+)
+
+tqdm.pandas(desc="Creating names", colour="GREEN")
+
+# Changing the name to have a good one Species.Notes.GenBankAcc
+ictv_df["File_identifier"] = ictv_df.progress_apply(
+    lambda x: f"{x.Species}.{x.Sort}.{x['Virus GENBANK accession']}",
+    axis = 1
+)
+
+ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
 ##########################################################################################
 
-logging.info(f"\n-> Fetching {viral_table_assembly}\n")
-print(f"-> Fetching {viral_table_assembly}")
+num_rows = ictv_df.shape[0]
 
-# Test if the file exist before to not have problem if the assembly file of NCBI change between two run for the same MICROBIAL
-if assembly_summary_viral_file.is_file():
-    assembly_summary_viral = pd.read_table(assembly_summary_viral_file)
-else:
-    assembly_summary_viral = get_assembly_file(viral_table_assembly)
-    # Writing the assembly summary
-
-    assembly_summary_viral["ftp_gbff"] = assembly_summary_viral.ftp_path.apply(
-        lambda x: "{}_genomic.gbff.gz".format(x.split("/")[-1])
-    )
-    assembly_summary_viral["ftp_fna"] = assembly_summary_viral.ftp_path.apply(
-        lambda x: "{}_genomic.fna.gz".format(x.split("/")[-1])
-    )
-    assembly_summary_viral["ftp_faa"] = assembly_summary_viral.ftp_path.apply(
-        lambda x: "{}_protein.faa.gz".format(x.split("/")[-1])
-    )
-    assembly_summary_viral["ftp_gff"] = assembly_summary_viral.ftp_path.apply(
-        lambda x: "{}_genomic.gff.gz".format(x.split("/")[-1])
-    )
-    assembly_summary_viral["ftp_gene"] = assembly_summary_viral.ftp_path.apply(
-        lambda x: "{}_cds_from_genomic.fna.gz".format(x.split("/")[-1])
-    )
-    assembly_summary_viral["ftp_report"] = assembly_summary_viral.ftp_path.apply(
-        lambda x: "{}_assembly_report.txt".format(x.split("/")[-1])
-    )
-
-    assembly_summary_viral.to_csv(assembly_summary_viral_file, index=False, sep="\t")
-
-    logging.debug(f"{assembly_summary_viral_file} had been written")
-
-logging.info("Done!")
-print("\nDone!\n")
+# RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
+pbar_gff =tqdm(desc="Gff processed", colour="CYAN", position=1, total=num_rows) 
+pbar_fna =tqdm(desc="Lst processed", colour="BLUE", position=2, total=num_rows) 
+pbar_lst =tqdm(desc="Fna processed", colour="MAGENTA", position=3, total=num_rows) 
+pbar_gene_fna =tqdm(desc="Gen processed", colour="RED", position=4, total=num_rows) 
+pbar_faa =tqdm(desc="Prt processed", colour="YELLOW", position=5, total=num_rows) 
 
 ##########################################################################################
 
-logging.info("\n-> Creating all the files for each genomes in assembly summary\n")
-print("-> Creating all the files for each genomes in assembly summary")
+logging.info("\n-> Creating all the files for each genomes in ICTV\n")
+print("-> Creating all the files for each genomes in ICTV")
 
 ##### MULTIPROCESS ACTION
-args_func = assembly_summary_viral.to_dict("records")
+args_func = ictv_df[["Virus GENBANK accession", "File_identidier"]].to_dict("records")
 
-num_rows = assembly_summary_viral.shape[0]
 
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows, colour="GREEN"))
+results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows, colour="GREEN", desc="Completely done", position=0))
 pool.close()
 queueListerner.stop()
-
-logging.info("Done!")
-print("\nDone!\n")
-
-##### TODO RENAME OF FILES + MERGE_REPORT
-logging.info("\n-> Creating metadata for the database\n")
-print("-> Creating metadata for the database")
-
-Path()
-
-dict_genbank, dict_ncid = get_info_report(Assembly_report.glob("*txt"))
-ictv_df = create_metadata(
-    ictv_xlsx=args.ictv_metadata,
-    assembly_table=assembly_summary_viral,
-    dict_ncid=dict_ncid,
-    dict_genbank=dict_genbank,
-    output_metadata=taxa / "ICTV_metadata.tsv",
-)
-
-logging.info("Done!")
-print("\nDone!\n")
-
-logging.info(
-    "\n-> Rename files based on virus species name, genbank accession and assembly accession\n"
-)
-print(
-    "-> Rename files based on virus species name, genbank accession and assembly accession"
-)
-
-rename_file(
-    ictv_df=ictv_df,
-    all_folders=[Genomes, Genes, GenBank, Proteins, Gff, Assembly_report],
-)
-
-rename_gene_files(Genes)
 
 logging.info("Done!")
 print("\nDone!\n")
