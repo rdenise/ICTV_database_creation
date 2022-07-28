@@ -379,9 +379,12 @@ def gbk2lst(replicon, lst_file) :
         if 'gene' in sequence.qualifiers :
             tmp_dict['gene'].append(' '.join(sequence.qualifiers['gene']))
             tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
-        else :
+        elif 'locus_tag' in sequence.qualifiers :
             tmp_dict['gene'].append(' '.join(sequence.qualifiers['locus_tag']))
             tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
+        else:
+            tmp_dict['gene'].append("NoLocusTag")
+            tmp_dict['locus_tag'].append("NoLocusTag")            
 
         if 'protein_id' in sequence.qualifiers :
             tmp_dict['synonyms'].append(' '.join(sequence.qualifiers['protein_id']))
