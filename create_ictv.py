@@ -200,10 +200,6 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     logging.debug(f"-> Reading: {nameFile}.lst")
 
-    columns_lst = ['start', 'end', 'strand', 'type', 'gene', 'status', 'synonyms',
-    'locus_tag', 'nexons', 'positions', 'sequence_nt', 'sequence_aa',
-    'product_note']
-
     dtype_lst = {
         'start':'int32',
         'end':'int32', 
@@ -220,7 +216,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
         'product_note':"string"
         }
 
-    lst_df = pd.read_table(lst_file, names=columns_lst, dtype=dtype_lst)
+    lst_df = pd.read_table(lst_file, dtype=dtype_lst)
 
     counter_lst.increment()
 
