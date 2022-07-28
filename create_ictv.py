@@ -205,6 +205,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     # Gene and protein fasta
     gen_file = Genes / f"{nameFile}.genes.fna"
+    prt_file = Proteins / f"{nameFile}.faa"
     
     if not prt_file.is_file(): 
         # Gene fasta
@@ -217,7 +218,6 @@ def efetch_accession2gbk(accGenBank_nameFile):
         # Protein fasta
         logging.debug(f"-> Creating: {nameFile}.faa")
 
-        prt_file = Proteins / f"{nameFile}.faa"
         gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
         counter_faa.increment()
