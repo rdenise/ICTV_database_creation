@@ -407,8 +407,12 @@ def gbk2gen(df_lst, gen_file) :
     df_lst_Valid_CDS = df_lst[(df_lst.type == 'CDS') & (df_lst.status == 'Valid')].reset_index(drop=True)
     dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict('records')
     # List of all the sequences to write
-    sequences = []
+    list_sequences = []
     
+    all_descriptions = []
+    all_starts = []
+    all_stops = []
+
     for sequence in dict_lst_Valid_CDS:
 
         start_codon = str(sequence['sequence_nt'][:3])
@@ -430,13 +434,18 @@ def gbk2gen(df_lst, gen_file) :
         gene_seq.description = ' '.join(list_description)
 
         # We add the gene modify in description to the list
-        sequences.append(gene_seq)
+        list_sequences.append(gene_seq)
 
-        df_lst_Valid_CDS['description_gembase'] = ' '.join(list_description)
-        df_lst_Valid_CDS['start_codon'] = start_codon
-        df_lst_Valid_CDS['stop_codon'] = stop_codon
+        all_descriptions.append(' '.join(list_description))
+        all_starts.append(start_codon)
+        all_stops.append(stop_codon)
 
-    SeqIO.write(sequences, gen_file, 'fasta')
+
+    df_lst_Valid_CDS['description_gembase'] = all_descriptions
+    df_lst_Valid_CDS['start_codon'] = all_starts
+    df_lst_Valid_CDS['stop_codon'] = all_stops
+
+    SeqIO.write(list_sequences, gen_file, 'fasta')
 
     return df_lst_Valid_CDS
 
@@ -614,7 +623,8 @@ ictv_df["File_identifier"] = ictv_df.apply(
 
 ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
-##########################################################################################
+logging.info("\n-> Creating all the files for each genomes in ICTV\n")
+print("-> Creating all the files for each genomes in ICTV")
 
 num_rows = ictv_df.shape[0]
 
@@ -625,11 +635,6 @@ counter_fna = Counter(desc="Lst processed", colour="BLUE", total=num_rows)
 counter_lst = Counter(desc="Fna processed", colour="MAGENTA", total=num_rows)
 counter_gene_fna = Counter(desc="Gen processed", colour="RED", total=num_rows)
 counter_faa = Counter(desc="Prt processed", colour="YELLOW", total=num_rows)
-
-##########################################################################################
-
-logging.info("\n-> Creating all the files for each genomes in ICTV\n")
-print("-> Creating all the files for each genomes in ICTV")
 
 ##### MULTIPROCESS ACTION
 args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
