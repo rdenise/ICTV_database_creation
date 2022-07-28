@@ -408,7 +408,7 @@ def gbk2gen(df_lst, gen_file) :
     # List of all the sequences to write
     sequences = []
     
-    for index, sequence in dict_lst_Valid_CDS.items():
+    for sequence in dict_lst_Valid_CDS:
 
         start_codon = str(sequence['sequence_nt'][:3])
         stop_codon = str(sequence['sequence_nt'][-3:])      
@@ -472,7 +472,7 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
     # List of all the proteins to write
     proteins = []
 
-    for index, sequence in dict_lst_Valid_CDS.items():
+    for sequence in dict_lst_Valid_CDS:
         seq = Seq(sequence['sequence_aa'])
 
         seq.id = sequence['synonyms']
