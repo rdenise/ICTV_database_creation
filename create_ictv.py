@@ -143,7 +143,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     gbk_file = GenBank / f"{nameFile}.gbk"
     
-    if gbk.is_file():
+    if gbk_file.is_file():
         logging.debug(f"-> Reading: {nameFile}.gbk")
     
         gbk = SeqIO.read(gbk_file, "genbank")
