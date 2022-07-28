@@ -480,19 +480,22 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
     dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict('records')
 
     # List of all the proteins to write
-    proteins = []
+    all_proteins = []
 
     for sequence in dict_lst_Valid_CDS:
-        seq = SeqRecord.SeqRecord(sequence['sequence_aa'])
 
-        seq.id = sequence['synonyms']
+        logging.debug(f"{sequence}")
+
+        protein = SeqRecord.SeqRecord(sequence['sequence_aa'])
+
+        protein.id = sequence['synonyms']
 
         # There is two spaces before the parenthesis in the .prt format so I keep it
-        seq.description = '{} (translation)'.format(sequence['description_gembase'])
+        protein.description = f"{sequence['description_gembase']} (translation)"
 
-        proteins.append(seq)
+        all_proteins.append(protein)
 
-    SeqIO.write(proteins, prt_file, 'fasta')
+    SeqIO.write(all_proteins, prt_file, 'fasta')
 
     return
 
