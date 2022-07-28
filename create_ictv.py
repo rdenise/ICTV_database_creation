@@ -428,8 +428,8 @@ def gbk2gen(df_lst, gen_file) :
         gene_seq.name = ''
 
         list_description = [sequence['strand'], start_codon, stop_codon, str(sequence['start']), str(sequence['end']),
-                       sequence['gene'], size_gene, sequence['synonyms'], sequence['locus_tag'],
-                       sequence['nexons'], sequence['positions'], product_note]
+                       sequence['gene'], str(size_gene), sequence['synonyms'], sequence['locus_tag'],
+                       str(sequence['nexons']), sequence['positions'], product_note]
 
         gene_seq.description = ' '.join(list_description)
 
