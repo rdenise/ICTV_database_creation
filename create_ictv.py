@@ -461,6 +461,8 @@ def gbk2gen(df_lst, gen_file) :
     df_lst_Valid_CDS['start_codon'] = all_starts
     df_lst_Valid_CDS['stop_codon'] = all_stops
 
+    logging.debug(list_sequences)
+
     SeqIO.write(list_sequences, gen_file, 'fasta')
 
     return df_lst_Valid_CDS
