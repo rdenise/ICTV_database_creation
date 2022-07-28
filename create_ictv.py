@@ -378,7 +378,10 @@ def gbk2lst(replicon, lst_file) :
         # But I have no clue why. Maybe because the file from assembly have a GenBank file without the gene part
         if 'gene' in sequence.qualifiers :
             tmp_dict['gene'].append(' '.join(sequence.qualifiers['gene']))
-            tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
+            if 'locus_tag' in sequence.qualifiers :
+                tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
+            else :
+                tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['gene']))
         elif 'locus_tag' in sequence.qualifiers :
             tmp_dict['gene'].append(' '.join(sequence.qualifiers['locus_tag']))
             tmp_dict['locus_tag'].append(' '.join(sequence.qualifiers['locus_tag']))
