@@ -303,7 +303,7 @@ def gbk2lst(replicon, lst_file) :
         'synonyms':[],
         'locus_tag':[],
         'nexons':[],
-        'position':[],
+        'positions':[],
         'sequence_nt':[],
         'sequence_aa':[],
         'product_note':[]
@@ -337,7 +337,7 @@ def gbk2lst(replicon, lst_file) :
         
         list_position = [str(position) for position in list_position]
 
-        tmp_dict['position'].append(' '.join(list_position))
+        tmp_dict['positions'].append(' '.join(list_position))
 
         tmp_dict['start'].append(int(list_position[0]))
         tmp_dict['end'].append(int(list_position[-1]))
