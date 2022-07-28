@@ -407,8 +407,8 @@ def gbk2lst(replicon, lst_file) :
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
             tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).seq))
 
-    logging.debug(f"{[len(i) for key, i in tmp_dict]}")
-    logging.debug(f"{[key for key, i in tmp_dict]}")
+    logging.debug(f"{[len(i) for key, i in tmp_dict.items()]}")
+    logging.debug(f"{[key for key, i in tmp_dict.items()]}")
 
     df = pd.DataFrame(tmp_dict)
 
