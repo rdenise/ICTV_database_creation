@@ -130,7 +130,7 @@ def create_folder(mypath):
 ##########################################################################################
 
 
-def efetch_accession2gbk(accGenBank_nameFile):
+def efetch_accession2gbk(accGenBank, nameFile):
     """
     Function that will get the assembly file from the ncbi server
 
@@ -142,8 +142,6 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     global counter_gbk
     global pbar_gbk
-
-    accGenBank, nameFile = accGenBank_nameFile
 
     gbk_file = GenBank / f"{nameFile}.gbk"
     
@@ -657,7 +655,7 @@ args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("rec
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(pool.imap(efetch_accession2gbk, args_func))
+results = list(pool.starmap(efetch_accession2gbk, args_func))
 pool.close()
 queueListerner.stop()
 
