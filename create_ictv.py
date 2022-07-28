@@ -139,6 +139,11 @@ def efetch_accession2gbk(accGenBank_nameFile):
     """
 
     global counter_gbk
+    global counter_gff
+    global counter_fna
+    global counter_lst
+    global counter_gene_fna
+    global counter_faa
 
     accGenBank = accGenBank_nameFile['Virus GENBANK accession']
     nameFile = accGenBank_nameFile['File_identifier']
@@ -154,14 +159,15 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         handle = Entrez.efetch(db="nucleotide", rettype="gbwithparts", retmode="text",
                             id=accGenBank)
-
         gbk = SeqIO.read(handle, 'genbank')
 
         logging.debug(f"-> Creating: {nameFile}.gbk")
 
-
         SeqIO.write(gbk, gbk_file, format='genbank')
 
+    counter_gbk.increment()
+
+    # GFF
     gff_file = Gff / f"{nameFile}.gff"
     
     if not gff_file.is_file():
@@ -169,6 +175,9 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2gff3(gbk_file=gbk_file, outfile=gff_file)
 
+    counter_gff.increment()
+
+    # Genome fasta
     fasta_file = Genomes / f"{nameFile}.fna"
 
     if not fasta_file.is_file():
@@ -176,6 +185,9 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2fasta(replicon=gbk, fasta_file=fasta_file)
 
+    counter_fna.increment()
+
+    # Lst file
     lst_file = Lst / f"{nameFile}.lst"
 
     if lst_file.is_file():
@@ -188,19 +200,26 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         lst_df = gbk2lst(gbk=gbk, lst_file=lst_file)
 
+    counter_lst.increment()
+
+    # Gene and protein fasta
     gen_file = Genes / f"{nameFile}.genes.fna"
     
     if not prt_file.is_file(): 
+        # Gene fasta
         logging.debug(f"-> Creating: {nameFile}.gene.fna")
 
         valid_df = gbk2gen(df_lst=lst_df, gen_file=gen_file)
         
+        counter_gene_fna.increment()
+
+        # Protein fasta
         logging.debug(f"-> Creating: {nameFile}.faa")
 
         prt_file = Proteins / f"{nameFile}.faa"
         gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
-    counter_gbk.increment()
+        counter_faa.increment()
 
     return 
 
@@ -242,9 +261,6 @@ def gbk2fasta(replicon, fasta_file) :
     :type: str    
     '''
 
-    global counter_fna
-    global pbar_fna
-
     date = replicon.annotations['date'] 
 
     len_bp = '{bp_size}bp'.format(bp_size=len(replicon))
@@ -256,9 +272,6 @@ def gbk2fasta(replicon, fasta_file) :
     replicon.description = f'{len_bp} {replicon.description} [{date}]'
 
     SeqIO.write(replicon, fasta_file, 'fasta')
-
-    counter_fna.increment()
-    pbar_fna.update(counter_fna.value())
 
     return
     
@@ -278,9 +291,6 @@ def gbk2lst(replicon, lst_file) :
     :return: The dataframe that was write in .lst file
     :rtype: pandas.DataFrame
     '''
-
-    global counter_lst
-    global pbar_lst
 
     tmp_dict = {
         'start':[],
@@ -371,9 +381,6 @@ def gbk2lst(replicon, lst_file) :
 
     df.to_csv(lst_file, index=False, sep='\t')
 
-    counter_lst.increment()
-    pbar_lst.update(counter_lst.value())
-
     return df
 
 
@@ -395,9 +402,6 @@ def gbk2gen(df_lst, gen_file) :
              calculating it again
     :rtype: pandas.DataFrame
     '''
-
-    global counter_gene_fna
-    global pbar_gene_fna
 
     df_lst_Valid_CDS = df_lst[(df_lst.type == 'CDS') & (df_lst.status == 'Valid')].reset_index(drop=True)
     dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict['records']
@@ -433,23 +437,14 @@ def gbk2gen(df_lst, gen_file) :
 
     SeqIO.write(sequences, gen_file, 'fasta')
 
-    counter_gene_fna.increment()
-    pbar_gene_fna.update(counter_gene_fna.value())
-
     return df_lst_Valid_CDS
 
 ##########################################################################################
 
 def gbk2gff3(gbk_file, outfile):
 
-    global counter_gff
-    global pbar_gff
-
     with open(outfile, "wt") as w_file:
         GFF.write(SeqIO.parse(gbk_file, "genbank"), w_file)
-
-    counter_gff.increment()
-    pbar_gff.update(counter_gff.value())
 
     return
 
@@ -470,9 +465,6 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
     :type: pandas.DataFrame   
     '''
 
-    global counter_faa
-    global pbar_faa
-
     # Transform the features of the gbk into a dict with the name of the locus_tag as key and feature as value
     # Allow to keep the order of the .lst file but using the translation of the .gbk without calculate it
     dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict['records']
@@ -491,9 +483,6 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
         proteins.append(seq)
 
     SeqIO.write(proteins, prt_file, 'fasta')
-
-    counter_faa.increment()
-    pbar_faa.update(counter_faa.value())
 
     return
 
@@ -635,7 +624,7 @@ ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 num_rows = ictv_df.shape[0]
 
 # RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
-counter_gbk = Counter(desc="Completely done", colour="GREEN", total=num_rows)
+counter_gbk = Counter(desc="Gbk processed", colour="GREEN", total=num_rows)
 counter_gff = Counter(desc="Gff processed", colour="CYAN", total=num_rows)
 counter_fna = Counter(desc="Lst processed", colour="BLUE", total=num_rows)
 counter_lst = Counter(desc="Fna processed", colour="MAGENTA", total=num_rows)
