@@ -404,7 +404,7 @@ def gbk2gen(df_lst, gen_file) :
     '''
 
     df_lst_Valid_CDS = df_lst[(df_lst.type == 'CDS') & (df_lst.status == 'Valid')].reset_index(drop=True)
-    dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict['records']
+    dict_lst_Valid_CDS = df_lst_Valid_CDS.to_dict('records')
     # List of all the sequences to write
     sequences = []
     
