@@ -12,6 +12,7 @@
 import argparse
 from textwrap import dedent
 import sys, os
+from numpy import dtype
 import pandas as pd
 import logging
 from logging.handlers import QueueHandler, QueueListener
@@ -192,7 +193,27 @@ def efetch_accession2gbk(accGenBank_nameFile):
     lst_file = Lst / f"{nameFile}.lst"
 
     if lst_file.is_file():
-        logging.debug(f"-> Reading: {nameFile}.gbk")
+        logging.debug(f"-> Reading: {nameFile}.lst")
+
+        columns_lst = ['start', 'end', 'strand', 'type', 'gene', 'status', 'synonyms',
+       'locus_tag', 'nexons', 'positions', 'sequence_nt', 'sequence_aa',
+       'product_note']
+
+        dtype_lst = {
+            'start':int,
+            'end':int, 
+            'strand':str, 
+            'type':str, 
+            'gene':str, 
+            'status':str, 
+            'synonyms':str,
+            'locus_tag':str, 
+            'nexons':int, 
+            'positions':str, 
+            'sequence_nt':str, 
+            'sequence_aa':str,
+            'product_note':str
+            }
 
         lst_df = pd.read_table(lst_file)
     else:
