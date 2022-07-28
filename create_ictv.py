@@ -20,7 +20,7 @@ import multiprocessing
 from pathlib import Path
 import datetime
 import Bio
-from Bio import Entrez, SeqIO
+from Bio import Entrez, SeqIO, SeqRecord
 from BCBio import GFF
 
 ##########################################################################################
@@ -374,8 +374,8 @@ def gbk2lst(replicon, lst_file) :
         note = ' '.join(sequence.qualifiers['note'])
         tmp_dict['product_note'].append(f'|{product}|{note}')
 
-        tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'])
-        tmp_dict['sequence_nt'].append(sequence.extract(replicon))
+        tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
+        tmp_dict['sequence_nt'].append(sequence.extract(replicon).seq)
 
     df = pd.DataFrame(tmp_dict)
 
@@ -415,7 +415,7 @@ def gbk2gen(df_lst, gen_file) :
 
         product_note = sequence['product_note']
 
-        gene_seq = sequence['sequence_nt']
+        gene_seq = SeqRecord.SeqRecord(sequence['sequence_nt'])
 
         size_gene = len(gene_seq)
 
@@ -473,7 +473,7 @@ def gbk2prt(prt_file, df_lst_Valid_CDS) :
     proteins = []
 
     for sequence in dict_lst_Valid_CDS:
-        seq = Seq(sequence['sequence_aa'])
+        seq = SeqRecord.SeqRecord(sequence['sequence_aa'])
 
         seq.id = sequence['synonyms']
 
