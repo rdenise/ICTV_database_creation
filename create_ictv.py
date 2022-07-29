@@ -574,7 +574,7 @@ general_option.add_argument(
     required=True,
     default=1,
     type=int,
-    choices=range(1, multiprocessing.cpu_count()) if multiprocessing.cpu_count() < 10 else range(1,10)
+    choices=range(1, multiprocessing.cpu_count()+1) if multiprocessing.cpu_count() < 10 else range(1,11)
 )
 general_option.add_argument(
     "-ictv",
