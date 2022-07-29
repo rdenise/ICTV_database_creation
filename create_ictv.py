@@ -59,6 +59,7 @@ class Counter(object):
 currentDate = datetime.date.today()
 Entrez.email = "rdenise@ucc.ie"
 Entrez.tool = "create_ictv.py"
+Entrez.api_key = "c7271a66422f38febdbfbc6169ae65764108"
 
 ##########################################################################################
 ##########################################################################################
@@ -155,8 +156,8 @@ def efetch_accession2gbk(accGenBank_nameFile):
         SeqIO.write(gbk, gbk_file, format='genbank')
 
 
-    global counter_gbk
-    counter_gbk.increment()
+    # global counter_gbk
+    # counter_gbk.increment()
 
     # GFF
     gff_file = Gff / f"{nameFile}.gff"
@@ -166,8 +167,8 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2gff3(gbk_file=gbk_file, outfile=gff_file)
 
-    global counter_gff
-    counter_gff.increment()
+    # global counter_gff
+    # counter_gff.increment()
 
     # Genome fasta
     fasta_file = Genomes / f"{nameFile}.fna"
@@ -177,8 +178,8 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2fasta(replicon=gbk, fasta_file=fasta_file)
 
-    global counter_fna
-    counter_fna.increment()
+    # global counter_fna
+    # counter_fna.increment()
 
     # Lst file
     lst_file = Lst / f"{nameFile}.lst"
@@ -209,8 +210,8 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     lst_df = pd.read_table(lst_file, dtype=dtype_lst)
 
-    global counter_lst
-    counter_lst.increment()
+    # global counter_lst
+    # counter_lst.increment()
 
     # Gene and protein fasta
     gen_file = Genes / f"{nameFile}.genes.fna"
@@ -222,16 +223,16 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         valid_df = gbk2gen(df_lst=lst_df, gen_file=gen_file)
         
-        global counter_gene_fna
-        counter_gene_fna.increment()
+        # global counter_gene_fna
+        # counter_gene_fna.increment()
 
         # Protein fasta
         logging.debug(f"-> Creating: {nameFile}.faa")
 
         gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
-        global counter_faa
-        counter_faa.increment()
+        # global counter_faa
+        # counter_faa.increment()
 
     return 
 
@@ -657,12 +658,12 @@ print("-> Creating all the files for each genomes in ICTV")
 num_rows = ictv_df.shape[0]
 
 # RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE
-counter_gbk = Counter(desc="Gbk processed", colour="GREEN", total=num_rows)
-counter_gff = Counter(desc="Gff processed", colour="CYAN", total=num_rows)
-counter_fna = Counter(desc="Lst processed", colour="BLUE", total=num_rows)
-counter_lst = Counter(desc="Fna processed", colour="MAGENTA", total=num_rows)
-counter_gene_fna = Counter(desc="Gen processed", colour="RED", total=num_rows)
-counter_faa = Counter(desc="Prt processed", colour="YELLOW", total=num_rows)
+# counter_gbk = Counter(desc="Gbk processed", colour="GREEN", total=num_rows)
+# counter_gff = Counter(desc="Gff processed", colour="CYAN", total=num_rows)
+# counter_fna = Counter(desc="Lst processed", colour="BLUE", total=num_rows)
+# counter_lst = Counter(desc="Fna processed", colour="MAGENTA", total=num_rows)
+# counter_gene_fna = Counter(desc="Gen processed", colour="RED", total=num_rows)
+# counter_faa = Counter(desc="Prt processed", colour="YELLOW", total=num_rows)
 
 ##### MULTIPROCESS ACTION
 args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
@@ -671,19 +672,19 @@ if args.threads > 1:
     pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
     )
-    results = list(pool.imap(efetch_accession2gbk, args_func))
+    results = list(tqdm(pool.imap(efetch_accession2gbk, args_func), desc="Genomes processed", total=num_rows, colour="GREEN"))
     pool.close()
     queueListerner.stop()
 else:
-    for pair_acc in args_func:
+    for pair_acc in tqdm(args_func, desc="Genomes processed", total=num_rows, colour="GREEN"):
         efetch_accession2gbk(pair_acc)
 
-counter_gbk.close()
-counter_gff.close()
-counter_fna.close()
-counter_lst.close()
-counter_gene_fna.close()
-counter_faa.close()
+# counter_gbk.close()
+# counter_gff.close()
+# counter_fna.close()
+# counter_lst.close()
+# counter_gene_fna.close()
+# counter_faa.close()
 
 logging.info("Done!")
 print("\nDone!\n")
