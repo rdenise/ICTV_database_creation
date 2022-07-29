@@ -38,7 +38,7 @@ from BCBio import GFF
 class Counter(object):
     def __init__(self, desc, colour, total ,initval=0):
         self.val = multiprocessing.RawValue('i', initval)
-        self.lock = multiprocessing.Lock()
+        self.lock = multiprocessing.RLock()
         self.pbar = tqdm(desc=desc, colour=colour, total=total)
         self.pbar.set_lock(self.lock)
 
