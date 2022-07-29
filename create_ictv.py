@@ -579,7 +579,7 @@ else:
     level = logging.NOTSET
 
 LOG_FORMAT = '%(levelname)s::%(asctime)s - %(message)s'
-logging.basicConfig(filename = os.path.join(OUTPUT, 'ictv_downloading.log'),
+logging.basicConfig(filename = os.path.join(args.output, "ictv_downloading.log"),
                     level = level,
                     format = LOG_FORMAT,
                     filemode = 'w')
