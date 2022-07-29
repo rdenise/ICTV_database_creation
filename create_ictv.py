@@ -708,14 +708,17 @@ if args.threads > 1:
     pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
     )
-    results = list(tqdm(pool.imap(gbk2fasta, args_func), desc="Genomes processed", total=num_rows, colour="BLUE"))
+    results = list(tqdm(pool.imap(gbk2file, args_func), desc="Genomes processed", total=num_rows, colour="BLUE"))
     pool.close()
 
     queueListerner.stop()
 else:
     for pair_acc in tqdm(args_func, desc="Genomes processed", total=num_rows, colour="GREEN"):
         efetch_accession2gbk(pair_acc)
-        gbk2fasta(pair_acc)
+
+    for pair_acc in tqdm(args_func, desc="Genomes processed", total=num_rows, colour="GREEN"):
+        gbk2file(pair_acc)
+    
 
 # counter_gbk.close()
 # counter_gff.close()
