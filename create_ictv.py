@@ -123,7 +123,6 @@ def create_folder(mypath):
 
 ##########################################################################################
 
-
 def efetch_accession2gbk(accGenBank_nameFile):
     """
     Function that will get the assembly file from the ncbi server
@@ -157,6 +156,24 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     # global counter_gbk
     # counter_gbk.increment()
+
+##########################################################################################
+
+def gbk2file(accGenBank_nameFile):
+    """
+    Function that will get the assembly file from the ncbi server
+
+    :params url: the url of the file (e.g. "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/assembly_summary_genbank.txt")
+    :type: str
+    :return: A dataframe with the information of the assembly file
+    :rtype: pandas.dataframe
+    """
+
+    nameFile = accGenBank_nameFile['File_identifier']
+
+    gbk_file = GenBank / f"{nameFile}.gbk"
+
+    gbk = SeqIO.read(gbk_file, "genbank")
 
     # GFF
     gff_file = Gff / f"{nameFile}.gff"
@@ -573,7 +590,7 @@ general_option.add_argument(
     required=True,
     default=1,
     type=int,
-    choices=range(1, multiprocessing.cpu_count()+1) if multiprocessing.cpu_count() < 10 else range(1,11)
+    choices=range(1, multiprocessing.cpu_count()+1)
 )
 general_option.add_argument(
     "-ictv",
@@ -668,11 +685,20 @@ num_rows = ictv_df.shape[0]
 args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
 
 if args.threads > 1:
+    subthreads = 10 if args.threads > 10 else args.threads
+
+    pool = multiprocessing.Pool(
+    processes=subthreads, initializer=init_process, initargs=[mpQueue, level]
+    )
+    results = list(tqdm(pool.imap(efetch_accession2gbk, args_func), desc="Genomes download", total=num_rows, colour="GREEN"))
+    pool.close()
+
     pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
     )
-    results = list(tqdm(pool.imap(efetch_accession2gbk, args_func), desc="Genomes processed", total=num_rows, colour="GREEN"))
+    results = list(tqdm(pool.imap(gbk2fasta, args_func), desc="Genomes processed", total=num_rows, colour="BLUE"))
     pool.close()
+
     queueListerner.stop()
 else:
     for pair_acc in tqdm(args_func, desc="Genomes processed", total=num_rows, colour="GREEN"):
