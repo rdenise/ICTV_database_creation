@@ -400,7 +400,7 @@ def gbk2lst(replicon, lst_file) :
 
         tmp_dict['product_note'].append(f'| {product} | {note}')
 
-        if tmp_dict['type'][-1] == "CDS":
+        if tmp_dict['type'][-1] == "CDS" and tmp_dict['status'][-1] == 'Valid':
             tmp_dict['sequence_aa'].append(sequence.qualifiers['translation'][0])
             tmp_dict['sequence_nt'].append(str(sequence.extract(replicon).seq))
         else:
@@ -574,7 +574,7 @@ general_option.add_argument(
     required=True,
     default=1,
     type=int,
-    choices=range(1, multiprocessing.cpu_count()),
+    choices=range(1, multiprocessing.cpu_count()) if multiprocessing.cpu_count() < 10 else range(1,10)
 )
 general_option.add_argument(
     "-ictv",
