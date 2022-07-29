@@ -24,6 +24,7 @@ from Bio import Entrez, SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from BCBio import GFF
+import re
 
 ##########################################################################################
 ##########################################################################################
@@ -142,20 +143,31 @@ def efetch_accession2gbk(accGenBank_nameFile):
         logging.debug(f"-> Reading: {nameFile}.gbk")
     
         gbk = SeqIO.read(gbk_file, "genbank")
-    else:
-        logging.debug(f"-> Downloading the identifier {accGenBank}")
 
-        handle = Entrez.efetch(db="nucleotide", rettype="gbwithparts", retmode="text",
-                            id=accGenBank)
-        gbk = SeqIO.read(handle, 'genbank')
 
-        logging.debug(f"-> Creating: {nameFile}.gbk")
+        with open(gbk_file, 'rt') as r_file:
+            line = r_file.readline()
+            bp_file = int(re.search(r'([0-9]+) bp', line).group(1))
 
-        SeqIO.write(gbk, gbk_file, format='genbank')
+        if len(gbk) == bp_file:
+            return
+
+    logging.debug(f"-> Downloading the identifier {accGenBank}")
+
+    handle = Entrez.efetch(db="nucleotide", rettype="gbwithparts", retmode="text",
+                        id=accGenBank)
+    gbk = SeqIO.read(handle, 'genbank')
+
+    logging.debug(f"-> Creating: {nameFile}.gbk")
+
+    SeqIO.write(gbk, gbk_file, format='genbank')
 
 
     # global counter_gbk
     # counter_gbk.increment()
+
+
+    return 
 
 ##########################################################################################
 
