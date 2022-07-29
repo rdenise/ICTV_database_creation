@@ -36,19 +36,18 @@ from BCBio import GFF
 
 class Counter(object):
     def __init__(self, desc, colour, total ,initval=0):
-        self.val = initval
-        self.lock = multiprocessing.RLock()
+        self.val = multiprocessing.RawValue('i', initval)
+        self.lock = multiprocessing.Lock()
         self.pbar = tqdm(desc=desc, colour=colour, total=total)
-        self.pbar.set_lock(self.lock)
 
     def increment(self):
         with self.lock:
-            self.val += 1
-            self.pbar.update(self.val)
+            self.val.value += 1
+            self.pbar.update(1)
 
     @property
     def value(self):
-        return self.val
+        return self.val.value
     
     def close(self):
         self.pbar.close()
