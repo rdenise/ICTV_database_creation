@@ -10,7 +10,6 @@
 ##########################################################################################
 
 import argparse
-from operator import le
 from textwrap import dedent
 import sys, os
 import pandas as pd
@@ -356,7 +355,7 @@ def gbk2lst(replicon, lst_file) :
 
         # The only states that I found in the .lst of MICROBIAL_D Partial, Pseudo, Invalid_Size, Valid : 
         if tmp_dict['status'][-1] == '' :
-            if 'pseudo' in sequence.qualifiers :
+            if 'pseudo' in sequence.qualifiers or 'pseudogene' in sequence.qualifiers:
                 tmp_dict['status'][-1] = 'Pseudo'
             elif 'note' in sequence.qualifiers and 'frameshift' in ' '.join(sequence.qualifiers['note']).lower() : 
                 tmp_dict['status'][-1] = 'Invalid_Size'
