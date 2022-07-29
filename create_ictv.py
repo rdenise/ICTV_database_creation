@@ -664,6 +664,12 @@ ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=T
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split("; ") if x == x else ""
 )
+
+# Some have a and
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.split(" and ") if x == x else ""
+)
+
 # Create one line per GENBANK accession ids
 ictv_df = ictv_df.explode("Virus GENBANK accession")
 
@@ -676,6 +682,12 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split(":")[-1] if x == x else ""
 )
+
+# Make sure identifier don't have space
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.strip()
+)
+
 
 # Changing the name to have a good one Species.Notes.GenBankAcc
 ictv_df["File_identifier"] = ictv_df.apply(
