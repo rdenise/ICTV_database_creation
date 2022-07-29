@@ -672,6 +672,11 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split(": ")[-1] if x == x else ""
 )
 
+# Take only the important part of the name
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.split(":")[-1] if x == x else ""
+)
+
 # Changing the name to have a good one Species.Notes.GenBankAcc
 ictv_df["File_identifier"] = ictv_df.apply(
     lambda x: f"{x.Species.replace(' ', '_')}.{x.Sort}.{x['Virus GENBANK accession']}",
