@@ -43,12 +43,12 @@ class Counter(object):
 
     def increment(self):
         with self.lock:
-            self.val.value += 1
+            self.val += 1
             self.pbar.update(self.val.value)
 
     @property
     def value(self):
-        return self.val.value
+        return self.val
     
     def close(self):
         self.pbar.close()
