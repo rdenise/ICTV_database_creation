@@ -71,14 +71,6 @@ Entrez.tool = "create_ictv.py"
 def logger_init(level):
     mpQueue = multiprocessing.Queue()
 
-    LOG_FORMAT = "%(levelname)s::%(asctime)s - %(message)s"
-    logging.basicConfig(
-        filename=os.path.join(args.output, "ictv_downloading.log"),
-        level=level,
-        format=LOG_FORMAT,
-        filemode="w",
-    )
-
     # this is the handler for all log records
     handler = logging.FileHandler(filename=os.path.join(args.output, "ictv_downloading.log"), mode="w")
     LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
@@ -91,7 +83,6 @@ def logger_init(level):
     logger = logging.getLogger()
     logger.setLevel(level)
     # add the handler to the logger so records from this process are handled
-    logger.addHandler(handler)
     logger.addHandler(handler)
 
     return queueListerner, mpQueue
