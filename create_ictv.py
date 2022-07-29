@@ -92,7 +92,9 @@ def logger_init(level):
 
 
 def init_process(mpQueue, level):
-    
+
+
+
     # all records from worker processes go to queueHandler and then into mpQueue
     queueHandler = QueueHandler(mpQueue)
     logger = logging.getLogger()
@@ -665,13 +667,16 @@ counter_faa = Counter(desc="Prt processed", colour="YELLOW", total=num_rows)
 ##### MULTIPROCESS ACTION
 args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
 
-
-pool = multiprocessing.Pool(
+if args.threads > 1:
+    pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
-)
-results = list(pool.imap(efetch_accession2gbk, args_func))
-pool.close()
-queueListerner.stop()
+    )
+    results = list(pool.imap(efetch_accession2gbk, args_func))
+    pool.close()
+    queueListerner.stop()
+else:
+    for pair_acc in args_func:
+        efetch_accession2gbk(pair_acc)
 
 counter_gbk.close()
 counter_gff.close()
