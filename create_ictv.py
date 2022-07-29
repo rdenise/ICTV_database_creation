@@ -10,6 +10,7 @@
 ##########################################################################################
 
 import argparse
+from operator import le
 from textwrap import dedent
 import sys, os
 import pandas as pd
@@ -611,6 +612,8 @@ elif args.verbosity == 2:
 else:
     level = logging.NOTSET
 
+queueListerner, mpQueue = logger_init(level=level)
+
 logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stamp}\n")
 
 
@@ -663,7 +666,7 @@ args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("rec
 
 
 pool = multiprocessing.Pool(
-    processes=args.threads
+    processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
 results = list(pool.imap(efetch_accession2gbk, args_func))
 pool.close()
