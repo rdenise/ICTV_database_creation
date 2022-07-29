@@ -44,7 +44,7 @@ class Counter(object):
     def increment(self):
         with self.lock:
             self.val += 1
-            self.pbar.update(self.val.value)
+            self.pbar.update(self.val)
 
     @property
     def value(self):
