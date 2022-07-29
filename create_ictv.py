@@ -141,13 +141,6 @@ def efetch_accession2gbk(accGenBank_nameFile):
     :rtype: pandas.dataframe
     """
 
-    global counter_gbk
-    global counter_gff
-    global counter_fna
-    global counter_lst
-    global counter_gene_fna
-    global counter_faa
-
     accGenBank = accGenBank_nameFile['Virus GENBANK accession']
     nameFile = accGenBank_nameFile['File_identifier']
 
@@ -168,6 +161,8 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         SeqIO.write(gbk, gbk_file, format='genbank')
 
+
+    global counter_gbk
     counter_gbk.increment()
 
     # GFF
@@ -178,6 +173,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2gff3(gbk_file=gbk_file, outfile=gff_file)
 
+    global counter_gff
     counter_gff.increment()
 
     # Genome fasta
@@ -188,6 +184,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2fasta(replicon=gbk, fasta_file=fasta_file)
 
+    global counter_fna
     counter_fna.increment()
 
     # Lst file
@@ -219,6 +216,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
     lst_df = pd.read_table(lst_file, dtype=dtype_lst)
 
+    global counter_lst
     counter_lst.increment()
 
     # Gene and protein fasta
@@ -231,6 +229,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         valid_df = gbk2gen(df_lst=lst_df, gen_file=gen_file)
         
+        global counter_gene_fna
         counter_gene_fna.increment()
 
         # Protein fasta
@@ -238,6 +237,7 @@ def efetch_accession2gbk(accGenBank_nameFile):
 
         gbk2prt(prt_file=prt_file, df_lst_Valid_CDS=valid_df)
 
+        global counter_faa
         counter_faa.increment()
 
     return 
