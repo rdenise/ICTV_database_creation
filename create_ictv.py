@@ -715,6 +715,7 @@ if args.threads > 1:
 else:
     for pair_acc in tqdm(args_func, desc="Genomes processed", total=num_rows, colour="GREEN"):
         efetch_accession2gbk(pair_acc)
+        gbk2fasta(pair_acc)
 
 # counter_gbk.close()
 # counter_gff.close()
