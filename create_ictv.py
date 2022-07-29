@@ -40,6 +40,7 @@ class Counter(object):
         self.val = multiprocessing.RawValue('i', initval)
         self.lock = multiprocessing.Lock()
         self.pbar = tqdm(desc=desc, colour=colour, total=total)
+        self.pbar.set_lock(self.lock)
 
     def increment(self):
         with self.lock:
