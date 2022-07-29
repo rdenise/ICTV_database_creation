@@ -91,18 +91,6 @@ def logger_init(level):
 ##########################################################################################
 
 
-def init_process(mpQueue, level):
-    
-    # all records from worker processes go to queueHandler and then into mpQueue
-    queueHandler = QueueHandler(mpQueue)
-    logger = logging.getLogger()
-    logger.setLevel(level)
-    logger.addHandler(queueHandler)
-
-
-##########################################################################################
-
-
 def create_folder(mypath):
 
     """
@@ -650,7 +638,7 @@ ictv_df["File_identifier"] = ictv_df.apply(
 
 ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
-logging.info("\n-> Creating all the files for each genomes in ICTV\n")
+logging.info("-> Creating all the files for each genomes in ICTV\n")
 print("-> Creating all the files for each genomes in ICTV")
 
 num_rows = ictv_df.shape[0]
@@ -668,7 +656,7 @@ args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("rec
 
 
 pool = multiprocessing.Pool(
-    processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
+    processes=args.threads
 )
 results = list(pool.imap(efetch_accession2gbk, args_func))
 pool.close()
@@ -684,7 +672,7 @@ counter_faa.close()
 logging.info("Done!")
 print("\nDone!\n")
 
-logging.info("\n-> Concatenation of Genomes, Genes and Proteins into one file each\n")
+logging.info("-> Concatenation of Genomes, Genes and Proteins into one file each\n")
 print("-> Concatenation of Genomes, Genes and Proteins into one file each")
 
 concat_files()
