@@ -67,29 +67,6 @@ Entrez.tool = "create_ictv.py"
 ##########################################################################################
 
 
-def logger_init(level):
-    mpQueue = multiprocessing.Queue()
-
-    # this is the handler for all log records
-    handler = logging.FileHandler(filename=os.path.join(args.output, "ictv_downloading.log"), mode="w")
-    LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
-    handler.setFormatter(logging.Formatter(LOG_FORMAT_HANDLER))
-
-    # queueListerner gets records from the queue and sends them to the handler
-    queueListerner = QueueListener(mpQueue, handler)
-    queueListerner.start()
-
-    logger = logging.getLogger()
-    logger.setLevel(level)
-    # add the handler to the logger so records from this process are handled
-    logger.addHandler(handler)
-
-    return queueListerner, mpQueue
-
-
-##########################################################################################
-
-
 def create_folder(mypath):
 
     """
@@ -601,7 +578,13 @@ elif args.verbosity == 2:
 else:
     level = logging.NOTSET
 
-queueListerner, mpQueue = logger_init(level)
+LOG_FORMAT = '%(levelname)s::%(asctime)s - %(message)s'
+logging.basicConfig(filename = os.path.join(OUTPUT, 'ictv_downloading.log'),
+                    level = level,
+                    format = LOG_FORMAT,
+                    filemode = 'w')
+
+logger = logging.getLogger()
 
 logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stamp}\n")
 
