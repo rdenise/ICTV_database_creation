@@ -34,6 +34,8 @@ def efetch_accession2gbk(accGenBank_nameFile):
     :rtype: pandas.dataframe
     """
 
+    accGenBank_nameFile, taxa = accGenBank_nameFile_taxa
+
     accGenBank = accGenBank_nameFile["Virus GENBANK accession"]
     nameFile = accGenBank_nameFile["File_identifier"]
 

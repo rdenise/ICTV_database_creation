@@ -29,7 +29,7 @@ from BCBio import GFF
 ##########################################################################################
 
 
-def gbk2file(accGenBank_nameFile):
+def gbk2file(accGenBank_nameFile_taxa):
     """
     Function that will get the assembly file from the ncbi server
 
@@ -38,6 +38,15 @@ def gbk2file(accGenBank_nameFile):
     :return: A dataframe with the information of the assembly file
     :rtype: pandas.dataframe
     """
+
+    accGenBank_nameFile, taxa = accGenBank_nameFile_taxa
+
+    Genomes = taxa / "Genomes"
+    GenBank = taxa / "GenBank"
+    Genes = taxa / "Genes"
+    Proteins = taxa / "Proteins"
+    Gff = taxa / "Gff"
+    Lst = taxa / "Lst"
 
     nameFile = accGenBank_nameFile["File_identifier"]
 

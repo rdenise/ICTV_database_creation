@@ -214,6 +214,8 @@ num_rows = ictv_df.shape[0]
 ##### MULTIPROCESS ACTION
 args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
 
+args_func = [[i, taxa] for i in args_func]
+
 if args.threads > 1:
     subthreads = 9 if args.threads > 9 else args.threads
 
