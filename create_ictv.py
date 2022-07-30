@@ -660,9 +660,19 @@ print("-> Reading all the information on ICTV and exploding the identifiers")
 ictv_df = pd.read_excel(args.ictv_metadata)
 ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
 
+# Change the list of GENBANK accession to list remove space
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.replace("; ", ";") if x == x else ""
+)
+
+# Change the list of GENBANK accession to list remove space
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.replace(": ", ":") if x == x else ""
+)
+
 # Change the list of GENBANK accession to list
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split("; ") if x == x else ""
+    lambda x: x.split(";") if x == x else ""
 )
 
 
@@ -692,11 +702,6 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
 
 # Create one line per GENBANK accession ids
 ictv_df = ictv_df.explode("Virus GENBANK accession")
-
-# Take only the important part of the name
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split(": ")[-1] if x == x else ""
-)
 
 # Take only the important part of the name
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
