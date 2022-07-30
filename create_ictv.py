@@ -718,7 +718,7 @@ num_rows = ictv_df.shape[0]
 args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
 
 if args.threads > 1:
-    subthreads = 10 if args.threads > 10 else args.threads
+    subthreads = 9 if args.threads > 9 else args.threads
 
     pool = multiprocessing.Pool(
     processes=subthreads, initializer=init_process, initargs=[mpQueue, level]
