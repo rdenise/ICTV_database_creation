@@ -432,7 +432,7 @@ def gbk2prt(prt_file, df_lst_Valid_CDS):
 ##########################################################################################
 
 
-def concat_files():
+def concat_files(Genomes, Proteins, Genes):
 
     folder2concat = {
         Genomes: taxa / "ICTV_all_genomes.fna",
