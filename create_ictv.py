@@ -693,9 +693,6 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
 # Create one line per GENBANK accession ids
 ictv_df = ictv_df.explode("Virus GENBANK accession")
 
-
-ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"] == "")].reset_index(drop=True)
-
 # Take only the important part of the name
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split(": ")[-1] if x == x else ""
@@ -710,6 +707,8 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.strip()
 )
+
+ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"] == "")].reset_index(drop=True)
 
 
 # Changing the name to have a good one Species.Notes.GenBankAcc
