@@ -685,6 +685,15 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
 # Create one line per GENBANK accession ids
 ictv_df = ictv_df.explode("Virus GENBANK accession")
 
+# Some have a " "
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.split(" ") if x == x else ""
+)
+
+# Create one line per GENBANK accession ids
+ictv_df = ictv_df.explode("Virus GENBANK accession")
+
+
 ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"] == "")].reset_index(drop=True)
 
 # Take only the important part of the name
