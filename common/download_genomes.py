@@ -24,7 +24,7 @@ Entrez.api_key = "c7271a66422f38febdbfbc6169ae65764108"
 ##########################################################################################
 
 
-def efetch_accession2gbk(accGenBank_nameFile):
+def efetch_accession2gbk(accGenBank_nameFile_taxa):
     """
     Function that will get the assembly file from the ncbi server
 
