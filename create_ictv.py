@@ -708,6 +708,8 @@ ictv_df["File_identifier"] = ictv_df.apply(
     axis = 1
 )
 
+ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
+
 ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
 logging.info("-> Creating all the files for each genomes in ICTV\n")
