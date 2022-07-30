@@ -685,6 +685,7 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
 # Create one line per GENBANK accession ids
 ictv_df = ictv_df.explode("Virus GENBANK accession")
 
+ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"] == " "].reset_index(drop=True)
 
 # Take only the important part of the name
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
@@ -707,8 +708,6 @@ ictv_df["File_identifier"] = ictv_df.apply(
     lambda x: f"{x.Species.replace(' ', '_')}.{x.Sort}.{x['Virus GENBANK accession']}",
     axis = 1
 )
-
-ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
 
 ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
