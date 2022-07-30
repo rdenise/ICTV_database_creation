@@ -271,7 +271,7 @@ print("\nDone!\n")
 logging.info("-> Concatenation of Genomes, Genes and Proteins into one file each\n")
 print("-> Concatenation of Genomes, Genes and Proteins into one file each")
 
-concat_files()
+concat_files(Genomes=Genomes, Proteins=Proteins, Genes=Genes)
 
 logging.info("Done!")
 print("\nDone!\n")
