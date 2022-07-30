@@ -19,6 +19,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from BCBio import GFF
 
+from utils import rawgencount
 
 ##########################################################################################
 ##########################################################################################
@@ -446,7 +447,7 @@ def concat_files(Genomes, Proteins, Genes, taxa):
             num_file = len(list(files2concat))
             for myfile in tqdm(folder.glob("*"), colour="GREEN", total=num_file):
                 with open(myfile) as r_file:
-                    num_line = r_file.read().count("\n")
+                    num_line = rawgencount(myfile)
                     for line in tqdm(
                         r_file, colour="BLUE", leave=False, total=num_line
                     ):
