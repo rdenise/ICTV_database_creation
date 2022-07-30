@@ -19,7 +19,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from BCBio import GFF
 
-from utils import rawgencount
+from common.utils import rawgencount
 
 ##########################################################################################
 ##########################################################################################
