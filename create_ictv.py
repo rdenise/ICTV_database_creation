@@ -237,6 +237,7 @@ def gbk2file(accGenBank_nameFile):
         }
 
     lst_df = pd.read_table(lst_file, dtype=dtype_lst)
+    lst_df.fillna('', inplace=True)
 
     # global counter_lst
     # counter_lst.increment()
