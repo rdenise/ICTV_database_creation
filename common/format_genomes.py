@@ -443,7 +443,7 @@ def concat_files(Genomes, Proteins, Genes, taxa):
     for folder, concat_file in folder2concat.items():
         with open(concat_file, "wt") as w_file:
             files2concat = folder.glob("*")
-            num_file = len(files2concat)
+            num_file = len(list(files2concat))
             for myfile in tqdm(files2concat, colour="GREEN", total=num_file):
                 with open(myfile) as r_file:
                     num_line = r_file.read().count("\n")
