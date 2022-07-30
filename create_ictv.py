@@ -670,6 +670,11 @@ ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.replace(": ", ":") if x == x else ""
 )
 
+# Change the list of GENBANK accession to list remove space
+ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+    lambda x: x.replace("DNA ", "DNA-") if x == x else ""
+)
+
 # Change the list of GENBANK accession to list
 ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
     lambda x: x.split(";") if x == x else ""
