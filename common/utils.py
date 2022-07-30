@@ -26,6 +26,8 @@ import multiprocessing
 
 
 def logger_init(level):
+    global args
+
     mpQueue = multiprocessing.Queue()
 
     # this is the handler for all log records
