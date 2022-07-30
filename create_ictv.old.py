@@ -52,7 +52,9 @@ def logger_init(level):
     )
 
     # this is the handler for all log records
-    handler = logging.FileHandler(filename=os.path.join(args.output, "ictv_downloading.log"), mode="w")
+    handler = logging.FileHandler(
+        filename=os.path.join(args.output, "ictv_downloading.log"), mode="w"
+    )
     LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
     handler.setFormatter(logging.Formatter(LOG_FORMAT_HANDLER))
 
@@ -206,7 +208,10 @@ def fetch_genbank_file(species):
     except:
         # Because some url seems to not be updated in the assembly file
         old_ftp = ftp_md5_path
-        new_ftp = old_ftp.replace(old_ftp.split("_")[-1], species["asm_name"]) + "/md5checksums.txt"
+        new_ftp = (
+            old_ftp.replace(old_ftp.split("_")[-1], species["asm_name"])
+            + "/md5checksums.txt"
+        )
         new_ftp = new_ftp.replace(" ", "_")
 
         logging.debug(f"Exception:: Change last url to correct {old_ftp} -> {new_ftp}")
@@ -578,7 +583,9 @@ num_rows = assembly_summary_viral.shape[0]
 pool = multiprocessing.Pool(
     processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
 )
-results = list(tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows, colour="GREEN"))
+results = list(
+    tqdm(pool.imap(fetch_genbank_file, args_func), total=num_rows, colour="GREEN")
+)
 pool.close()
 queueListerner.stop()
 
