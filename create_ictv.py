@@ -488,7 +488,11 @@ def gbk2gen(df_lst, gen_file) :
                        sequence['gene'], str(size_gene), sequence['synonyms'], sequence['locus_tag'],
                        str(sequence['nexons']), sequence['positions'], product_note]
 
-        gene_seq.description = ' '.join(list_description)
+        try:
+            gene_seq.description = ' '.join(list_description)
+        except:
+            print(list_description)
+            sys.exit(0)
 
         # We add the gene modify in description to the list
         list_sequences.append(gene_seq)
