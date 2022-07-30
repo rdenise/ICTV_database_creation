@@ -25,8 +25,7 @@ import multiprocessing
 ##########################################################################################
 
 
-def logger_init(level):
-    global args
+def logger_init(level, args):
 
     mpQueue = multiprocessing.Queue()
 

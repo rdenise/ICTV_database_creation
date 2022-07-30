@@ -119,7 +119,7 @@ elif args.verbosity == 2:
 else:
     level = logging.NOTSET
 
-queueListerner, mpQueue = logger_init(level=level)
+queueListerner, mpQueue = logger_init(level=level, args=args)
 
 logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stamp}\n")
 
