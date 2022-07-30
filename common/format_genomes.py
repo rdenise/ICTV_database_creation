@@ -441,16 +441,15 @@ def concat_files(Genomes, Proteins, Genes, taxa):
     }
 
     for folder, concat_file in folder2concat.items():
-        if not concat_file.is_file():
-            with open(concat_file, "wt") as w_file:
-                files2concat = folder.glob("*")
-                num_file = len(files2concat)
-                for myfile in tqdm(files2concat, colour="GREEN", total=num_file):
-                    with open(myfile) as r_file:
-                        num_line = r_file.read().count("\n")
-                        for line in tqdm(
-                            r_file, colour="BLUE", leave=False, total=num_line
-                        ):
-                            w_file.write(line)
+        with open(concat_file, "wt") as w_file:
+            files2concat = folder.glob("*")
+            num_file = len(files2concat)
+            for myfile in tqdm(files2concat, colour="GREEN", total=num_file):
+                with open(myfile) as r_file:
+                    num_line = r_file.read().count("\n")
+                    for line in tqdm(
+                        r_file, colour="BLUE", leave=False, total=num_line
+                    ):
+                        w_file.write(line)
 
     return
