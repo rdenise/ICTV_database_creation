@@ -69,6 +69,8 @@ def gbk2file(accGenBank_nameFile_taxa):
     # Genome fasta
     fasta_file = Genomes / f"{nameFile}.fna"
 
+    genome = nameFile.split(".")[-1]
+
     if not fasta_file.is_file():
         logging.debug(f"-> Creating: {nameFile}.fna")
 
@@ -84,11 +86,12 @@ def gbk2file(accGenBank_nameFile_taxa):
         # create a file to quickly have the informations
         logging.debug(f"-> Creating: {nameFile}.lst")
 
-        lst_df = gbk2lst(replicon=gbk, lst_file=lst_file)
+        lst_df = gbk2lst(replicon=gbk, lst_file=lst_file, genome=genome)
 
     logging.debug(f"-> Reading: {nameFile}.lst")
 
     dtype_lst = {
+        "genome": "string",
         "start": "int32",
         "end": "int32",
         "strand": "string",
@@ -169,7 +172,7 @@ def gbk2fasta(replicon, fasta_file):
 ##########################################################################################
 
 
-def gbk2lst(replicon, lst_file):
+def gbk2lst(replicon, lst_file, genome):
 
     """
     Function that will create the .lst file for a specific replicon
@@ -185,6 +188,7 @@ def gbk2lst(replicon, lst_file):
     """
 
     tmp_dict = {
+        "genome": genome,
         "start": [],
         "end": [],
         "strand": [],
@@ -351,6 +355,7 @@ def gbk2gen(df_lst, gen_file):
             str(sequence["end"]),
             sequence["gene"],
             str(size_gene),
+            sequence["genome"],
             sequence["synonyms"],
             sequence["locus_tag"],
             str(sequence["nexons"]),
@@ -442,15 +447,25 @@ def concat_files(Genomes, Proteins, Genes, taxa):
     }
 
     for folder, concat_file in folder2concat.items():
+
+        # Make sure that we remove duplicate of name if genome too similar
+        list_genome = []
+
         with open(concat_file, "wt") as w_file:
             files2concat = folder.glob("*")
             num_file = len(list(files2concat))
             for myfile in tqdm(folder.glob("*"), colour="GREEN", total=num_file):
-                with open(myfile) as r_file:
-                    num_line = rawgencount(myfile)
-                    for line in tqdm(
-                        r_file, colour="BLUE", leave=False, total=num_line
-                    ):
-                        w_file.write(line)
+                genome = myfile.stem.split(".")[-1]
 
+                # The name of the genes files have gene after the genome name
+                genome = genome if genome != "genes" else myfile.stem.split(".")[-2]
+                if genome not in list_genome:
+                    list_genome.append(genome)
+                    with open(myfile) as r_file:
+                        num_line = rawgencount(myfile)
+                        for line in tqdm(
+                            r_file, colour="BLUE", leave=False, total=num_line
+                        ):
+                            w_file.write(line)
+        
     return

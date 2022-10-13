@@ -84,7 +84,7 @@ general_option.add_argument(
     "--ictv_metadata",
     metavar="<ictv_metadata_table>",
     dest="ictv_metadata",
-    help="Path to the ICTV taxonomy xlsx table that contain the Genbank Id, can be found: https://talk.ictvonline.org/taxonomy/vmr/m/vmr-file-repository/",
+    help="Path to the ICTV taxonomy xlsx table that contain the Genbank Id, can be found: https://talk.ictvonline.org/taxonomy/vmr/",
     required=True,
     default="",
     type=str,
