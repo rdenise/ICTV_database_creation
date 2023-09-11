@@ -74,7 +74,7 @@ def gbk2file(accGenBank_nameFile_taxa):
     if not fasta_file.is_file():
         logging.debug(f"-> Creating: {nameFile}.fna")
 
-        gbk2fasta(replicon=gbk, fasta_file=fasta_file)
+        gbk2fasta(replicon=gbk, fasta_file=fasta_file, genome=genome)
 
     # global counter_fna
     # counter_fna.increment()
@@ -140,7 +140,7 @@ def gbk2file(accGenBank_nameFile_taxa):
 ##########################################################################################
 
 
-def gbk2fasta(replicon, fasta_file):
+def gbk2fasta(replicon, fasta_file, genome):
 
     """
     Function that will create the .fst file for a specific replicon
@@ -152,13 +152,17 @@ def gbk2fasta(replicon, fasta_file):
     :type: str
     :params fasta_file: Path of the new created file
     :type: str
+    :params genome: The accession id of the genome in GenBank
+    :type: str 
     """
 
     date = replicon.annotations["date"]
 
+    accession = genome
+
     len_bp = "{bp_size}bp".format(bp_size=len(replicon))
 
-    replicon.id = replicon.name
+    replicon.id = accession
 
     replicon.name = ""
 
@@ -179,7 +183,7 @@ def gbk2lst(replicon, lst_file, genome):
 
     :params replicon: The actual replicon with all the informations of the genbank
     :type: Bio.SeqRecord.SeqRecord
-    :params replicon_id: The gembase id of the replicon
+    :params genome: The accession id of the genome in GenBank
     :type: str
     :params lst_file: Path of the new created file
     :type: str
@@ -363,7 +367,9 @@ def gbk2gen(df_lst, gen_file):
             product_note,
         ]
 
-        list_description = [x if x == x else "" for x in list_description]
+        list_description = [x if x == x else "NoEntry" for x in list_description]
+        # Protect gene name with a space
+        list_description = [x.replace(" ", "_") for x in list_description]
 
         gene_seq.description = " ".join(list_description)
 
