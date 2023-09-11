@@ -19,6 +19,7 @@ from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
 import datetime
+import wget
 
 from common.download_genomes import *
 from common.utils import *
@@ -85,8 +86,7 @@ general_option.add_argument(
     metavar="<ictv_metadata_table>",
     dest="ictv_metadata",
     help="Path to the ICTV taxonomy xlsx table that contain the Genbank Id, can be found: https://talk.ictvonline.org/taxonomy/vmr/",
-    required=True,
-    default="",
+    default="ICTV_metadata.xlsx",
     type=str,
 )
 
@@ -131,8 +131,26 @@ logging.info(f"ICTV creation logging for version : ICTV_database_{args.date_stam
 logging.info("\n-> Reading all the information on ICTV and exploding the identifiers\n")
 print("-> Reading all the information on ICTV and exploding the identifiers")
 
+##########################################################################################
 
-ictv_df = pd.read_excel(args.ictv_metadata)
+ICTV_metadata = args.ictv_metadata if os.path.exists(args.ictv_metadata) else os.path.join(taxa, args.ictv_metadata)
+
+if os.path.exists(ICTV_metadata):
+    print(f"Found {ICTV_metadata} as expected")
+else:
+    print(f'File {ICTV_metadata} does not exist will try downloading now')
+    print("Will download the current VMR now")
+    url = "https://ictv.global/vmr/current"
+    try:
+        wget.download(url, ICTV_metadata)
+        print(f"\n{url} downloaded successfully!")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while downloading {url}: {e}")
+
+##########################################################################################
+ 
+
+ictv_df = pd.read_excel(ICTV_metadata)
 ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
 
 # Change the list of GENBANK accession to list remove space
@@ -189,6 +207,9 @@ ictv_df = ictv_df.explode("Virus GENBANK accession")
 
 # Remove empty
 ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"] == "")].reset_index(drop=True)
+
+# Remove number only
+ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"]).str.startswith("(")].reset_index(drop=True)
 
 # Changing the name to have a good one Species.Notes.GenBankAcc
 ictv_df["File_identifier"] = ictv_df.apply(

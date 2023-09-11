@@ -31,7 +31,7 @@ def logger_init(level, args):
 
     # this is the handler for all log records
     handler = logging.FileHandler(
-        filename=os.path.join(args.output, "ictv_downloading.log"), mode="w"
+        filename=os.path.join(args.output, "ICTV_database", f"{args.date_stamp}_ictv_downloading.log"), mode="w"
     )
     LOG_FORMAT_HANDLER = "%(levelname)s: %(asctime)s - %(process)s - %(message)s"
     handler.setFormatter(logging.Formatter(LOG_FORMAT_HANDLER))
