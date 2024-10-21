@@ -29,8 +29,8 @@ def efetch_accession2gbk(accGenBank_nameFile_taxa):
 
     :params url: the url of the file (e.g. "https://ftp.ncbi.nlm.nih.gov/genomes/genbank/assembly_summary_genbank.txt")
     :type: str
-    :return: A dataframe with the information of the assembly file
-    :rtype: pandas.dataframe
+    :return: Name of the viruses that are viruses
+    :rtype: str
     """
 
     accGenBank_nameFile, taxa = accGenBank_nameFile_taxa
@@ -52,7 +52,7 @@ def efetch_accession2gbk(accGenBank_nameFile_taxa):
             bp_file = int(re.search(r"([0-9]+) bp", line).group(1))
 
         if len(gbk) == bp_file:
-            return
+            return accGenBank
 
     logging.debug(f"-> Downloading the identifier {accGenBank}")
 
@@ -61,6 +61,14 @@ def efetch_accession2gbk(accGenBank_nameFile_taxa):
     )
     gbk = SeqIO.read(handle, "genbank")
 
+    taxonomy = gbk.annotations.get('taxonomy', [])
+
+    if taxonomy[0] != "Viruses":
+        taxo_join = ";".join(taxonomy)
+        logging.info(f"-> Genome not a Virus: {accGenBank}. It will not be included in the database. {taxo_join}")
+
+        return
+
     logging.debug(f"-> Creating: {nameFile}.gbk")
 
     SeqIO.write(gbk, gbk_file, format="genbank")
@@ -68,7 +76,7 @@ def efetch_accession2gbk(accGenBank_nameFile_taxa):
     # global counter_gbk
     # counter_gbk.increment()
 
-    return
+    return accGenBank
 
 
 ##########################################################################################

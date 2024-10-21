@@ -217,7 +217,6 @@ ictv_df["File_identifier"] = ictv_df.apply(
     axis=1,
 )
 
-ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
 logging.info("-> Creating all the files for each genomes in ICTV\n")
 print("-> Creating all the files for each genomes in ICTV")
@@ -253,6 +252,10 @@ if args.threads > 1:
     )
     pool.close()
 
+    ictv_df = ictv_df[ictv_df["Virus GENBANK accession"].isin(results)].reset_index(drop=True)
+    args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
+    args_func = [[i, taxa] for i in args_func]
+
     pool = multiprocessing.Pool(
         processes=args.threads, initializer=init_process, initargs=[mpQueue, level]
     )
@@ -268,10 +271,16 @@ if args.threads > 1:
 
     queueListerner.stop()
 else:
+    results = []
+
     for pair_acc in tqdm(
         args_func, desc="Genomes download", total=num_rows, colour="GREEN"
     ):
-        efetch_accession2gbk(pair_acc)
+        results.append(efetch_accession2gbk(pair_acc))
+
+    ictv_df = ictv_df[ictv_df["Virus GENBANK accession"].isin(results)].reset_index(drop=True)
+    args_func = ictv_df[["Virus GENBANK accession", "File_identifier"]].to_dict("records")
+    args_func = [[i, taxa] for i in args_func]
 
     for pair_acc in tqdm(
         args_func, desc="Genomes processed", total=num_rows, colour="BLUE"
@@ -285,6 +294,8 @@ else:
 # counter_lst.close()
 # counter_gene_fna.close()
 # counter_faa.close()
+
+ictv_df.to_csv(taxa / "ICTV_metadata.tsv", index=False, sep="\t")
 
 logging.info("Done!")
 print("\nDone!\n")
