@@ -20,6 +20,7 @@ import multiprocessing
 from pathlib import Path
 import datetime
 import wget
+import subprocess
 
 from common.download_genomes import *
 from common.utils import *
@@ -150,70 +151,76 @@ else:
 ##########################################################################################
  
 
-ictv_df = pd.read_excel(ICTV_metadata)
+ictv_df = pd.read_excel(ICTV_metadata, sheet_name=1)
 ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].isna()].reset_index(drop=True)
 
-# Change the list of GENBANK accession to list remove space
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.replace("; ", ";") if x == x else ""
-)
+# Check if there is any special characters in the accession to remove them. If we want to keep them we can think about how to deal with them
+ictv_df[ictv_df["Virus GENBANK accession"].str.contains(r'[^A-Za-z0-9]', regex=True)].to_csv(taxa / "ICTV_metadata_not_downloaded_more_than_one_fragment.tsv", index=False, sep="\t")
 
-# Change the list of GENBANK accession to list remove space
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.replace(": ", ":") if x == x else ""
-)
+# Only keep the accession that are correct
+ictv_df = ictv_df[~ictv_df["Virus GENBANK accession"].str.contains(r'[^A-Za-z0-9]', regex=True)].reset_index(drop=True)
 
-# Change the list of GENBANK accession to list
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split(";") if x == x else ""
-)
+# # Change the list of GENBANK accession to list remove space
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.replace("; ", ";") if x == x else ""
+# )
 
-# Create one line per GENBANK accession ids
-ictv_df = ictv_df.explode("Virus GENBANK accession")
+# # Change the list of GENBANK accession to list remove space
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.replace(": ", ":") if x == x else ""
+# )
 
-# Some have a " and "
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split(" and ") if x == x else ""
-)
+# # Change the list of GENBANK accession to list
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.split(";") if x == x else ""
+# )
 
-# Create one line per GENBANK accession ids
-ictv_df = ictv_df.explode("Virus GENBANK accession")
+# # Create one line per GENBANK accession ids
+# ictv_df = ictv_df.explode("Virus GENBANK accession")
 
-# Some have a ", "
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split(",") if x == x else ""
-)
+# # Some have a " and "
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.split(" and ") if x == x else ""
+# )
 
-# Create one line per GENBANK accession ids
-ictv_df = ictv_df.explode("Virus GENBANK accession")
+# # Create one line per GENBANK accession ids
+# ictv_df = ictv_df.explode("Virus GENBANK accession")
 
-# Take only the important part of the name
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split(":")[-1] if x == x else ""
-)
+# # Some have a ", "
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.split(",") if x == x else ""
+# )
 
-# Make sure identifier don't have space
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.strip()
-)
+# # Create one line per GENBANK accession ids
+# ictv_df = ictv_df.explode("Virus GENBANK accession")
 
-# Some have a " "
-ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
-    lambda x: x.split(" ") if x == x else ""
-)
+# # Take only the important part of the name
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.split(":")[-1] if x == x else ""
+# )
 
-# Create one line per GENBANK accession ids
-ictv_df = ictv_df.explode("Virus GENBANK accession")
+# # Make sure identifier don't have space
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.strip()
+# )
 
-# Remove empty
-ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"] == "")].reset_index(drop=True)
+# # Some have a " "
+# ictv_df["Virus GENBANK accession"] = ictv_df["Virus GENBANK accession"].apply(
+#     lambda x: x.split(" ") if x == x else ""
+# )
 
-# Remove number only
-ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"]).str.startswith("(")].reset_index(drop=True)
+# # Create one line per GENBANK accession ids
+# ictv_df = ictv_df.explode("Virus GENBANK accession")
+
+# # Remove empty
+# ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"] == "")].reset_index(drop=True)
+
+# # Remove number only
+# ictv_df = ictv_df[~(ictv_df["Virus GENBANK accession"]).str.startswith("(")].reset_index(drop=True)
 
 # Changing the name to have a good one Species.Notes.GenBankAcc
 ictv_df["File_identifier"] = ictv_df.apply(
-    lambda x: f"{x.Species.replace(' ', '_')}.{x.Sort}.{x['Virus GENBANK accession']}",
+    lambda x: f"{x.Species.replace(' ', '_')}.{x['Species Sort']}.{x['Virus GENBANK accession']}",
     axis=1,
 )
 
