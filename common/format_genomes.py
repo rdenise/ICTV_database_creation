@@ -18,6 +18,7 @@ from Bio import Entrez, SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from BCBio import GFF
+from Bio.SeqFeature import CompoundLocation
 
 from common.utils import rawgencount
 
@@ -225,13 +226,13 @@ def gbk2lst(replicon, lst_file, genome):
                 tmp_dict["status"][-1] = "Partial"
 
             # Add position to the list of position and start +1 because python begin at 0
-            list_position.extend([position.nofuzzy_start + 1, position.nofuzzy_end])
+            list_position.extend([int(position.start) + 1, int(position.end)])
 
         # I do not know why but even if biopython know where is the start and stop, he order weirdly when it is in the complementary strand
         list_position = sorted(list_position)
 
         # Because bug of biopython, when gene on the virtual cut of the chromosome it does not know how to identify the start and the stop
-        if sequence.location_operator == "join" and sequence.location.start == 0:
+        if isinstance(sequence.location, CompoundLocation) and sequence.location.start == 0:
             # put the first 2 element at the end
             for j in range(2):
                 list_position.append(list_position.pop(0))
@@ -256,7 +257,7 @@ def gbk2lst(replicon, lst_file, genome):
                 tmp_dict["status"][-1] = "Valid"
 
         # D if in direct strand (=> strand = 1), C in complementary strand (=> strand = -1)
-        tmp_dict["strand"].append("+" if sequence.strand == 1 else "-")
+        tmp_dict["strand"].append("+" if sequence.location.strand == 1 else "-")
         tmp_dict["type"].append(sequence.type)
         tmp_dict["nexons"].append(len(sequence.location.parts))
 
